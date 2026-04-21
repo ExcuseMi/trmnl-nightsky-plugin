@@ -1,25 +1,30 @@
 {% template main %}
 {% assign moon_id  = "moon-"  | append_random %}
 {% assign mf_class = "mf-"    | append_random %}
-{% assign sky_id   = "sky-"   | append_random %}
 <div class="layout layout--col gap--small">
 
   {% if view == 1 %}
 
     {% comment %} ── Compact header ── {% endcomment %}
     <div class="flex gap--small align--center">
-      <span class="title title--large" style="flex-shrink:0">{{ viewing.stars_text }}</span>
-      <span class="title">{{ viewing.verdict }} viewing</span>
-      <span class="label label--small" style="margin-left:auto;flex-shrink:0">Bortle {{ sky.bortle }} · {{ sky.bortle_label }} · NELM {{ sky.nelm }} · ~{{ sky.stars_formatted }} stars</span>
+      <span class="title title--large" style="flex-shrink:0">{{ data.viewing.stars_text }}</span>
+      <span class="title">{{ data.viewing.verdict }} viewing</span>
+      <span class="label label--small" style="margin-left:auto;flex-shrink:0">Bortle {{ data.sky.bortle }} · {{ data.sky.bortle_label }} · NELM {{ data.sky.nelm }} · ~{{ data.sky.stars_formatted }} stars</span>
     </div>
 
     <div style="border-top:2px solid black;flex-shrink:0"></div>
 
-    {% comment %} ── Main: sky diagram | hourly grid + conditions ── {% endcomment %}
+    {% comment %} ── Main: sky chart | hourly grid + conditions ── {% endcomment %}
     <div class="flex gap--none" style="flex:1;min-height:0">
 
-      {% comment %} Sky dome chart {% endcomment %}
-      <div id="{{ sky_id }}" style="width:200px;height:200px;flex-shrink:0"></div>
+      {% comment %} Sky dome — backend-rendered SVG {% endcomment %}
+      {% if data.sky.chart != "" %}
+        <img src="{{ data.sky.chart }}" style="width:200px;height:200px;flex-shrink:0">
+      {% else %}
+        <div style="width:200px;height:200px;flex-shrink:0;border:1px solid #ccc;display:flex;align-items:center;justify-content:center">
+          <span class="label label--small" style="text-align:center">Sky chart<br>unavailable</span>
+        </div>
+      {% endif %}
 
       <div style="border-left:1px solid black;margin:0 12px;flex-shrink:0"></div>
 
@@ -28,14 +33,14 @@
 
         <div class="flex gap--[3px]">
           <div style="width:52px;flex-shrink:0"></div>
-          {% for h in forecast.hourly %}
+          {% for h in data.forecast.hourly %}
             <div style="flex:1;text-align:center"><span class="label label--small">{{ h.hour }}</span></div>
           {% endfor %}
         </div>
 
         <div class="flex gap--[3px] align--end">
           <div style="width:52px;flex-shrink:0;align-self:center"><span class="label label--small">☁ Cloud</span></div>
-          {% for h in forecast.hourly %}
+          {% for h in data.forecast.hourly %}
             {% assign bar_h = h.cloud | times: 38 | divided_by: 100 %}
             {% if h.cloud > 75 %}{% assign bg = "black" %}{% elsif h.cloud > 30 %}{% assign bg = "#888" %}{% else %}{% assign bg = "#ddd" %}{% endif %}
             <div style="flex:1;background:{{ bg }};min-height:3px;height:{{ bar_h | at_least: 3 }}px;border:1px solid #ccc"></div>
@@ -43,11 +48,11 @@
         </div>
 
         {% assign has_seeing = false %}
-        {% for h in forecast.hourly %}{% if h.seeing > 0 %}{% assign has_seeing = true %}{% endif %}{% endfor %}
+        {% for h in data.forecast.hourly %}{% if h.seeing > 0 %}{% assign has_seeing = true %}{% endif %}{% endfor %}
         {% if has_seeing %}
           <div class="flex gap--[3px] align--end">
             <div style="width:52px;flex-shrink:0;align-self:center"><span class="label label--small">👁 Seeing</span></div>
-            {% for h in forecast.hourly %}
+            {% for h in data.forecast.hourly %}
               {% if h.seeing > 0 %}
                 {% assign bar_h = h.seeing | minus: 1 | times: 28 | divided_by: 7 %}
                 {% if h.seeing >= 6 %}{% assign bg = "black" %}{% elsif h.seeing >= 4 %}{% assign bg = "#888" %}{% else %}{% assign bg = "#ddd" %}{% endif %}
@@ -60,11 +65,11 @@
         {% endif %}
 
         {% assign has_transp = false %}
-        {% for h in forecast.hourly %}{% if h.transparency > 0 %}{% assign has_transp = true %}{% endif %}{% endfor %}
+        {% for h in data.forecast.hourly %}{% if h.transparency > 0 %}{% assign has_transp = true %}{% endif %}{% endfor %}
         {% if has_transp %}
           <div class="flex gap--[3px] align--end">
             <div style="width:52px;flex-shrink:0;align-self:center"><span class="label label--small">✦ Transp.</span></div>
-            {% for h in forecast.hourly %}
+            {% for h in data.forecast.hourly %}
               {% if h.transparency > 0 %}
                 {% assign bar_h = h.transparency | minus: 1 | times: 28 | divided_by: 7 %}
                 {% if h.transparency >= 6 %}{% assign bg = "black" %}{% elsif h.transparency >= 4 %}{% assign bg = "#888" %}{% else %}{% assign bg = "#ddd" %}{% endif %}
@@ -80,12 +85,12 @@
         <div style="border-top:1px solid #ccc;padding-top:4px;margin-top:2px">
           <div class="flex flex--col gap--[3px]">
             <span class="label label--small">
-              ☀ ↓{{ sun.sets }} ↑{{ sun.rises }}
-              · ☽ {{ moon.phase }} {{ moon.illumination }}%{% if moon.sets %} ↓{{ moon.sets }}{% endif %}
-              {% if viewing.best_from %}· ★ {{ viewing.best_from }}{% endif %}
+              ☀ ↓{{ data.sun.sets }} ↑{{ data.sun.rises }}
+              · ☽ {{ data.moon.phase }} {{ data.moon.illumination }}%{% if data.moon.sets %} ↓{{ data.moon.sets }}{% endif %}
+              {% if data.viewing.best_from %}· ★ {{ data.viewing.best_from }}{% endif %}
             </span>
-            <span class="label label--small">🌡 {{ forecast.now.temp }}°C · 💧 {{ forecast.now.dew_point }}°C dew · 💨 {{ forecast.now.wind_dir }} {{ forecast.now.wind_speed }} km/h · RH {{ forecast.now.humidity }}%</span>
-            <span class="label label--small">Cloud low {{ forecast.now.cloud_low }}% · mid {{ forecast.now.cloud_mid }}% · high {{ forecast.now.cloud_high }}%</span>
+            <span class="label label--small">🌡 {{ data.forecast.now.temp }}°C · 💧 {{ data.forecast.now.dew_point }}°C dew · 💨 {{ data.forecast.now.wind_dir }} {{ data.forecast.now.wind_speed }} km/h · RH {{ data.forecast.now.humidity }}%</span>
+            <span class="label label--small">Cloud low {{ data.forecast.now.cloud_low }}% · mid {{ data.forecast.now.cloud_mid }}% · high {{ data.forecast.now.cloud_high }}%</span>
           </div>
         </div>
 
@@ -100,7 +105,7 @@
       <div class="flex flex--col gap--xsmall" style="flex-shrink:0">
         <span class="label label--underline">Moon</span>
         <div class="flex gap--small">
-          {% for day in moon.days %}
+          {% for day in data.moon.days %}
             <div class="flex flex--col gap--[2px] align--center" style="width:52px">
               <img class="{{ mf_class }}"
                    data-illum="{{ day.illumination }}"
@@ -117,9 +122,9 @@
 
       <div class="flex flex--col gap--xsmall" style="flex:1;min-width:0">
         <span class="label label--underline">Planets above horizon</span>
-        {% if planets.size > 0 %}
+        {% if data.planets.size > 0 %}
           <div class="grid grid--cols-2 gap--xsmall">
-            {% for planet in planets limit: 6 %}
+            {% for planet in data.planets limit: 6 %}
               <div class="flex flex--col gap--[2px]">
                 <span class="label label--small">{{ planet.name }} {{ planet.dir }} {{ planet.alt }}°</span>
                 <span class="label label--small">mag {{ planet.mag }} · {{ planet.size }}" · {{ planet.constellation }}</span>
@@ -138,19 +143,19 @@
     <div class="flex gap--medium">
       <div class="flex flex--col gap--xsmall align--center" style="width:64px;flex-shrink:0">
         <img id="{{ moon_id }}" style="width:56px;height:56px" alt="moon">
-        <span class="label label--small" style="text-align:center">{{ moon.illumination }}%</span>
-        {% if moon.sets %}<span class="label label--small">↓ {{ moon.sets }}</span>{% endif %}
+        <span class="label label--small" style="text-align:center">{{ data.moon.illumination }}%</span>
+        {% if data.moon.sets %}<span class="label label--small">↓ {{ data.moon.sets }}</span>{% endif %}
       </div>
       <div style="border-left:1px solid black;align-self:stretch;margin:0 8px;flex-shrink:0"></div>
       <div class="flex flex--col gap--xsmall" style="flex:1;min-width:0">
         <div class="flex gap--small align--center">
-          <span class="title">{{ viewing.verdict }}</span>
-          <span class="label">{{ viewing.stars_text }}</span>
+          <span class="title">{{ data.viewing.verdict }}</span>
+          <span class="label">{{ data.viewing.stars_text }}</span>
         </div>
-        <span class="label label--small">{{ moon.phase }} · Bortle {{ sky.bortle }} · NELM {{ sky.nelm }}</span>
-        <span class="label label--small">☀ ↓{{ sun.sets }} ↑{{ sun.rises }} · ☁ {{ forecast.now.cloud }}% · 🌡 {{ forecast.now.temp }}°C 💨 {{ forecast.now.wind_dir }} {{ forecast.now.wind_speed }}</span>
-        {% if planets.size > 0 %}
-          <span class="label label--small">{% for planet in planets limit: 3 %}{{ planet.name }} {{ planet.dir }} {{ planet.alt }}° ({{ planet.mag }}){% unless forloop.last %} · {% endunless %}{% endfor %}</span>
+        <span class="label label--small">{{ data.moon.phase }} · Bortle {{ data.sky.bortle }} · NELM {{ data.sky.nelm }}</span>
+        <span class="label label--small">☀ ↓{{ data.sun.sets }} ↑{{ data.sun.rises }} · ☁ {{ data.forecast.now.cloud }}% · 🌡 {{ data.forecast.now.temp }}°C 💨 {{ data.forecast.now.wind_dir }} {{ data.forecast.now.wind_speed }}</span>
+        {% if data.planets.size > 0 %}
+          <span class="label label--small">{% for planet in data.planets limit: 3 %}{{ planet.name }} {{ planet.dir }} {{ planet.alt }}° ({{ planet.mag }}){% unless forloop.last %} · {% endunless %}{% endfor %}</span>
         {% endif %}
       </div>
     </div>
@@ -160,9 +165,9 @@
     <div class="flex gap--small align--center">
       <img id="{{ moon_id }}" style="width:48px;height:48px;flex-shrink:0" alt="moon">
       <div class="flex flex--col gap--xsmall">
-        <span class="title">{{ viewing.verdict }} {{ viewing.stars_text }}</span>
-        <span class="label label--small">{{ moon.phase }} {{ moon.illumination }}% · Bortle {{ sky.bortle }}</span>
-        <span class="label label--small">☀ ↓{{ sun.sets }} ↑{{ sun.rises }} · ☁ {{ forecast.now.cloud }}% · {{ forecast.now.temp }}°C</span>
+        <span class="title">{{ data.viewing.verdict }} {{ data.viewing.stars_text }}</span>
+        <span class="label label--small">{{ data.moon.phase }} {{ data.moon.illumination }}% · Bortle {{ data.sky.bortle }}</span>
+        <span class="label label--small">☀ ↓{{ data.sun.sets }} ↑{{ data.sun.rises }} · ☁ {{ data.forecast.now.cloud }}% · {{ data.forecast.now.temp }}°C</span>
       </div>
     </div>
 
@@ -171,8 +176,8 @@
     <div class="flex gap--small align--center">
       <img id="{{ moon_id }}" style="width:38px;height:38px;flex-shrink:0" alt="moon">
       <div class="flex flex--col gap--xsmall">
-        <span class="label">{{ viewing.verdict }} {{ viewing.stars_text }}</span>
-        <span class="label label--small">{{ moon.illumination }}% · ☁ {{ forecast.now.cloud }}%</span>
+        <span class="label">{{ data.viewing.verdict }} {{ data.viewing.stars_text }}</span>
+        <span class="label label--small">{{ data.moon.illumination }}% · ☁ {{ data.forecast.now.cloud }}%</span>
       </div>
     </div>
 
@@ -181,13 +186,12 @@
 </div>
 <div class="title_bar">
   <img class="image" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'/%3E%3C/svg%3E" alt="Night Sky">
-  <span class="title">{{ trmnl.plugin_settings.instance_name }} — {{ viewing.date }}</span>
+  <span class="title">{{ trmnl.plugin_settings.instance_name }} — {{ data.viewing.date }}</span>
 </div>
 
 <script>
 (function() {
   var moonId  = '{{ moon_id }}';
-  var skyId   = '{{ sky_id }}';
   var mfClass = '{{ mf_class }}';
 
   function moonShape(illum, isWaxing, r, c) {
@@ -201,70 +205,22 @@
   }
 
   function moonSrc(illum, isWaxing, r, c) {
-    var size = (c * 2);
+    var size = c * 2;
     var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+size+' '+size+'">'+moonShape(illum, isWaxing, r, c)+'</svg>';
     return 'data:image/svg+xml;base64,' + btoa(svg);
   }
 
-  {% comment %} Main moon image {% endcomment %}
-  var illum = {{ moon.illumination | default: 0 }};
-  var isWaxing = /Waxing|New Moon|First Quarter/.test({{ moon.phase | json }});
+  var illum    = {{ data.moon.illumination | default: 0 }};
+  var isWaxing = /Waxing|New Moon|First Quarter/.test({{ data.moon.phase | json }});
+
   var el = document.getElementById(moonId);
   if (el) el.src = moonSrc(illum, isWaxing, 38, 40);
 
-  {% comment %} Moon forecast mini images {% endcomment %}
   document.querySelectorAll('.' + mfClass).forEach(function(img) {
     var i = parseInt(img.getAttribute('data-illum') || '0');
     var w = img.getAttribute('data-waxing') === 'true';
     img.src = moonSrc(i, w, 38, 40);
   });
-
-  {% comment %} Sky dome diagram {% endcomment %}
-  var moonData = { alt: {{ moon.alt | default: 0 }}, az: {{ moon.az | default: 0 }}, illum: {{ moon.illumination | default: 0 }}, isWaxing: isWaxing };
-  var planets  = [{% for p in planets %}{ name: {{ p.name | json }}, alt: {{ p.alt }}, az: {{ p.az }} }{% unless forloop.last %},{% endunless %}{% endfor %}];
-
-  var size = 200, r = 88, cx = 100, cy = 100;
-  var p = [];
-
-  p.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="white" stroke="black" stroke-width="2"/>');
-  [30,60].forEach(function(a) {
-    var rr = (r * (90 - a) / 90).toFixed(1);
-    p.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+rr+'" fill="none" stroke="#ccc" stroke-width="1" stroke-dasharray="3,3"/>');
-  });
-  p.push('<line x1="'+cx+'" y1="'+(cy-r)+'" x2="'+cx+'" y2="'+(cy+r)+'" stroke="#e0e0e0" stroke-width="1"/>');
-  p.push('<line x1="'+(cx-r)+'" y1="'+cy+'" x2="'+(cx+r)+'" y2="'+cy+'" stroke="#e0e0e0" stroke-width="1"/>');
-  p.push('<text x="'+cx+'" y="'+(cy-r-4)+'" text-anchor="middle" font-size="11" font-family="sans-serif" font-weight="bold">N</text>');
-  p.push('<text x="'+(cx+r+5)+'" y="'+(cy+4)+'" text-anchor="start"  font-size="11" font-family="sans-serif" font-weight="bold">E</text>');
-  p.push('<text x="'+cx+'" y="'+(cy+r+14)+'" text-anchor="middle" font-size="11" font-family="sans-serif" font-weight="bold">S</text>');
-  p.push('<text x="'+(cx-r-5)+'" y="'+(cy+4)+'" text-anchor="end"    font-size="11" font-family="sans-serif" font-weight="bold">W</text>');
-  p.push('<text x="'+(cx+2)+'" y="'+(cy-3)+'" text-anchor="middle" font-size="8" font-family="sans-serif" fill="#aaa">Zenith</text>');
-
-  function xy(alt, az) {
-    var rObj = r * (1 - alt / 90);
-    var azRad = az * Math.PI / 180;
-    return { x: +(cx + rObj * Math.sin(azRad)).toFixed(1), y: +(cy - rObj * Math.cos(azRad)).toFixed(1) };
-  }
-
-  if (moonData.alt > 0) {
-    var mp = xy(moonData.alt, moonData.az);
-    var mr = 8;
-    p.push(moonShape(moonData.illum, moonData.isWaxing, mr, 0)
-      .replace(/cx="0"/g, 'cx="'+mp.x+'"')
-      .replace(/cy="0"/g, 'cy="'+mp.y+'"')
-      .replace(/d="M 0,/g, 'd="M '+mp.x+',')
-      .replace(/ 0,/g, ' '+mp.x+','));
-    p.push('<text x="'+mp.x+'" y="'+(mp.y-mr-3)+'" text-anchor="middle" font-size="8" font-family="sans-serif">Moon</text>');
-  }
-
-  var abbr = { Mercury:'Mer', Venus:'Ven', Mars:'Mar', Jupiter:'Jup', Saturn:'Sat', Uranus:'Ura', Neptune:'Nep' };
-  planets.forEach(function(pl) {
-    var pp = xy(pl.alt, pl.az);
-    p.push('<circle cx="'+pp.x+'" cy="'+pp.y+'" r="4" fill="black"/>');
-    p.push('<text x="'+pp.x+'" y="'+(pp.y-7)+'" text-anchor="middle" font-size="8" font-family="sans-serif">'+(abbr[pl.name]||pl.name.slice(0,3))+'</text>');
-  });
-
-  var skyEl = document.getElementById(skyId);
-  if (skyEl) skyEl.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="'+size+'" height="'+size+'">'+p.join('')+'</svg>';
 })();
 </script>
 {% endtemplate %}

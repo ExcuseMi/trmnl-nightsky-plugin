@@ -1,4 +1,4 @@
-import asyncio, math, logging
+import asyncio, math, logging, base64
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import aiohttp
@@ -357,6 +357,140 @@ def _compute_verdict(bortle: int, illumination: int, cloud_now: int) -> dict:
     return {"verdict": verdict, "stars_text": stars, "score": score}
 
 
+# (RA decimal hours, Dec degrees, visual magnitude)
+_BRIGHT_STARS = [
+    (6.753, -16.716, -1.46), (6.400, -52.696, -0.74), (14.261,  19.182, -0.05),
+    (18.615,  38.784,  0.03), (5.278,  45.998,  0.08), ( 5.242,  -8.202,  0.12),
+    ( 7.655,   5.225,  0.38), (1.628, -57.237,  0.46), ( 5.919,   7.407,  0.50),
+    (14.063, -60.373,  0.61), (12.443, -63.099,  0.76), (19.846,   8.868,  0.77),
+    ( 4.598,  16.509,  0.85), (16.490, -26.432,  0.96), (13.420, -11.161,  0.98),
+    ( 7.755,  28.026,  1.14), (22.961, -29.622,  1.16), (12.795, -59.688,  1.25),
+    (20.690,  45.280,  1.25), (10.140,  11.967,  1.35), ( 6.977, -28.972,  1.50),
+    ( 7.577,  31.889,  1.58), (12.519, -57.113,  1.63), (17.560, -37.104,  1.63),
+    ( 5.419,   6.350,  1.64), ( 5.438,  28.608,  1.65), ( 9.220, -69.717,  1.68),
+    ( 5.604,  -1.202,  1.70), (22.137, -46.961,  1.74), ( 5.679,  -1.943,  1.74),
+    (12.901,  55.960,  1.77), (11.062,  61.751,  1.79), ( 3.405,  49.861,  1.79),
+    ( 8.160, -47.337,  1.83), ( 7.139, -26.393,  1.84), (18.403, -34.384,  1.85),
+    (17.622, -43.000,  1.86), ( 8.375, -59.510,  1.86), (13.792,  49.313,  1.86),
+    ( 5.992,  44.948,  1.90), (16.811, -69.028,  1.92), ( 6.629,  16.399,  1.93),
+    (20.428, -56.735,  1.94), ( 6.378, -17.956,  1.98), ( 9.460,  -8.659,  1.99),
+    ( 2.530,  89.264,  1.97), ( 2.120,  23.462,  2.00), (10.333,  19.845,  2.01),
+    ( 0.727, -17.987,  2.04), (18.921, -26.297,  2.05), ( 0.140,  29.090,  2.07),
+    ( 1.162,  35.620,  2.07), ( 2.065,  42.330,  2.10), ( 5.796,  -9.670,  2.07),
+    (17.582,  12.560,  2.08), (14.845,  74.156,  2.08), ( 3.136,  40.957,  2.09),
+    (11.818,  14.572,  2.14), ( 0.945,  60.717,  2.15), (12.692, -48.960,  2.20),
+    ( 8.060, -40.003,  2.21), ( 9.285, -59.275,  2.21), ( 9.133, -43.433,  2.23),
+    (15.578,  26.715,  2.23), ( 5.534,  -0.299,  2.23), ( 0.675,  56.537,  2.23),
+    ( 0.153,  59.150,  2.27), (13.399,  54.925,  2.27), (17.943,  51.490,  2.23),
+    (16.836, -34.293,  2.29), (15.999, -22.622,  2.32), (14.749,  27.074,  2.35),
+    (11.031,  56.383,  2.37), ( 0.436, -42.306,  2.40), (17.172, -15.724,  2.43),
+    (11.897,  53.695,  2.44), (23.063,  28.083,  2.44), ( 7.401, -29.303,  2.45),
+    (21.310,  62.585,  2.45), (20.770,  33.970,  2.46), (23.079,  15.205,  2.49),
+    (11.235,  20.524,  2.56), ( 5.545, -17.822,  2.58), (12.264, -17.541,  2.59),
+    (15.283,  -9.383,  2.61), (15.737,   6.426,  2.63), ( 1.911,  20.808,  2.64),
+    ( 5.662, -34.074,  2.65), (12.573, -23.397,  2.65), ( 1.430,  60.235,  2.68),
+    ( 4.950,  33.166,  2.69), (14.844, -16.042,  2.75), ( 5.138,  -5.087,  2.79),
+    ( 0.221,  15.184,  2.83), ( 5.471, -20.759,  2.84), ( 3.906,  31.884,  2.85),
+    (21.526,  -5.571,  2.87), (22.711, -46.885,  2.87), (22.097,  -0.320,  2.96),
+    (19.512,  27.960,  3.09), (16.619, -10.567,  3.02), (17.937, -37.103,  3.17),
+    ( 6.332,  22.514,  3.18), (10.827, -16.194,  2.99), (15.258,  33.314,  3.16),
+    (16.688,  31.603,  3.15), ( 5.908,  37.213,  3.03), ( 6.247,  22.507,  3.35),
+    ( 4.300,  15.628,  3.54), (13.911,  18.397,  3.49), ( 8.745, -54.708,  1.96),
+    (21.736, -16.132,  3.77), (22.027, -16.662,  3.77), ( 4.597,  16.509,  0.85),
+]
+
+_PLANET_ABBR = {
+    "Mercury": "Mer", "Venus": "Ven", "Mars": "Mar",
+    "Jupiter": "Jup", "Saturn": "Sat", "Uranus": "Ura", "Neptune": "Nep",
+}
+
+
+def _moon_crescent_svg(illum: int, is_waxing: bool, r: float, cx: float, cy: float) -> str:
+    cx_s, cy_s = f"{cx:.1f}", f"{cy:.1f}"
+    if illum <= 2:
+        return f'<circle cx="{cx_s}" cy="{cy_s}" r="{r}" fill="#111" stroke="#888" stroke-width="0.5"/>'
+    if illum >= 98:
+        return f'<circle cx="{cx_s}" cy="{cy_s}" r="{r}" fill="white" stroke="#888" stroke-width="0.5"/>'
+    frac   = illum / 100
+    ex     = round(abs(1 - 2 * frac) * r, 1)
+    bs     = 1 if is_waxing else 0
+    ts     = bs if frac < 0.5 else (1 - bs)
+    tx, ty = f"{cx:.1f}", f"{cy - r:.1f}"
+    bx, by = f"{cx:.1f}", f"{cy + r:.1f}"
+    d = f"M {tx},{ty} A {r} {r} 0 0 {bs} {bx},{by} A {ex} {r} 0 0 {ts} {tx},{ty} Z"
+    return (f'<circle cx="{cx_s}" cy="{cy_s}" r="{r}" fill="#111" stroke="#888" stroke-width="0.5"/>'
+            f'<path d="{d}" fill="white"/>')
+
+
+def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list) -> str:
+    SIZE, R, CX, CY = 200, 86, 100, 100
+
+    obs = ephem.Observer()
+    obs.lat      = lat
+    obs.lon      = lon
+    obs.elevation = 0
+    obs.pressure  = 0
+    obs.date = datetime.now(timezone.utc).strftime("%Y/%m/%d %H:%M:%S")
+
+    def _xy(alt_deg: float, az_deg: float) -> tuple[float, float]:
+        rr     = R * (1 - alt_deg / 90)
+        az_rad = math.radians(az_deg)
+        return CX + rr * math.sin(az_rad), CY - rr * math.cos(az_rad)
+
+    p: list[str] = []
+
+    # Background
+    p.append(f'<circle cx="{CX}" cy="{CY}" r="{R}" fill="black"/>')
+    # Altitude rings at 30° and 60°
+    for alt in (30, 60):
+        rr = R * (90 - alt) / 90
+        p.append(f'<circle cx="{CX}" cy="{CY}" r="{rr:.1f}" fill="none" stroke="#444" stroke-width="0.5" stroke-dasharray="2,2"/>')
+    # Crosshairs
+    p.append(f'<line x1="{CX}" y1="{CY-R}" x2="{CX}" y2="{CY+R}" stroke="#333" stroke-width="0.5"/>')
+    p.append(f'<line x1="{CX-R}" y1="{CY}" x2="{CX+R}" y2="{CY}" stroke="#333" stroke-width="0.5"/>')
+    # Cardinal labels
+    p.append(f'<text x="{CX}" y="{CY-R-4}" text-anchor="middle" font-size="10" font-family="sans-serif" fill="white" font-weight="bold">N</text>')
+    p.append(f'<text x="{CX+R+5}" y="{CY+4}" text-anchor="start" font-size="10" font-family="sans-serif" fill="white" font-weight="bold">E</text>')
+    p.append(f'<text x="{CX}" y="{CY+R+13}" text-anchor="middle" font-size="10" font-family="sans-serif" fill="white" font-weight="bold">S</text>')
+    p.append(f'<text x="{CX-R-5}" y="{CY+4}" text-anchor="end" font-size="10" font-family="sans-serif" fill="white" font-weight="bold">W</text>')
+
+    # Stars
+    star_body = ephem.FixedBody()
+    star_body._epoch = ephem.J2000
+    for ra_h, dec_d, mag in _BRIGHT_STARS:
+        star_body._ra  = ra_h / 12 * math.pi
+        star_body._dec = math.radians(dec_d)
+        star_body.compute(obs)
+        alt_deg = math.degrees(float(star_body.alt))
+        if alt_deg < 0:
+            continue
+        az_deg = math.degrees(float(star_body.az))
+        sx, sy = _xy(alt_deg, az_deg)
+        sr = 3.0 if mag < 0 else 2.5 if mag < 1 else 2.0 if mag < 2 else 1.5 if mag < 3 else 1.0
+        p.append(f'<circle cx="{sx:.1f}" cy="{sy:.1f}" r="{sr}" fill="white"/>')
+
+    # Moon
+    moon_alt = moon_data.get("alt", -1)
+    moon_az  = moon_data.get("az", 0)
+    if moon_alt > 0:
+        mx, my = _xy(moon_alt, moon_az)
+        illum    = moon_data.get("illumination", 50)
+        is_waxing = "Waxing" in moon_data.get("phase", "") or moon_data.get("phase") in ("New Moon", "First Quarter")
+        p.append(_moon_crescent_svg(illum, is_waxing, 7, mx, my))
+        p.append(f'<text x="{mx:.1f}" y="{my - 10:.1f}" text-anchor="middle" font-size="7" font-family="sans-serif" fill="white">Moon</text>')
+
+    # Planets (on top of stars)
+    for pl in planets:
+        px, py = _xy(pl["alt"], pl["az"])
+        abbr = _PLANET_ABBR.get(pl["name"], pl["name"][:3])
+        p.append(f'<circle cx="{px:.1f}" cy="{py:.1f}" r="4" fill="white" stroke="black" stroke-width="0.5"/>')
+        p.append(f'<text x="{px:.1f}" y="{py - 7:.1f}" text-anchor="middle" font-size="7" font-family="sans-serif" fill="white">{abbr}</text>')
+
+    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{SIZE}" height="{SIZE}">'
+           + "".join(p) + "</svg>")
+    return "data:image/svg+xml;base64," + base64.b64encode(svg.encode()).decode()
+
+
 def _format_stars(n: int) -> str:
     return f"{n // 1000}k+" if n >= 1000 else str(n)
 
@@ -400,6 +534,8 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str) -> di
     if best_from:
         viewing["best_from"] = best_from
 
+    chart = _generate_sky_chart(lat, lon, moon, planets)
+
     return {
         "sky": {
             "bortle":          bortle_int,
@@ -407,6 +543,7 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str) -> di
             "nelm":            bortle_info["nelm"],
             "stars":           bortle_info["stars"],
             "stars_formatted": _format_stars(bortle_info["stars"]),
+            "chart":           chart,
         },
         "sun":      sun,
         "moon":     moon,
