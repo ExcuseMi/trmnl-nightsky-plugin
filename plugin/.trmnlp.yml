@@ -32,10 +32,27 @@ variables:
     illumination: 62
     sets: "23:14"
     rises: "15:45"
-  clouds:
-    now: 15
-    next6h_avg: 22
-    hourly: [15, 20, 35, 50, 40, 28, 15, 10]
+  forecast:
+    now:
+      cloud: 15
+      cloud_low: 5
+      cloud_mid: 8
+      cloud_high: 10
+      next6h_avg: 22
+      temp: 11
+      dew_point: 7
+      humidity: 74
+      wind_speed: 12
+      wind_dir: "W"
+    hourly:
+      - { hour: "21", cloud: 15, cloud_low: 5,  cloud_mid: 8,  cloud_high: 10, seeing: 2, transparency: 2 }
+      - { hour: "22", cloud: 22, cloud_low: 8,  cloud_mid: 10, cloud_high: 12, seeing: 2, transparency: 3 }
+      - { hour: "23", cloud: 40, cloud_low: 15, cloud_mid: 20, cloud_high: 18, seeing: 3, transparency: 3 }
+      - { hour: "00", cloud: 55, cloud_low: 20, cloud_mid: 28, cloud_high: 22, seeing: 4, transparency: 4 }
+      - { hour: "01", cloud: 35, cloud_low: 10, cloud_mid: 18, cloud_high: 15, seeing: 3, transparency: 3 }
+      - { hour: "02", cloud: 20, cloud_low: 5,  cloud_mid: 10, cloud_high: 12, seeing: 2, transparency: 2 }
+      - { hour: "03", cloud: 10, cloud_low: 2,  cloud_mid: 5,  cloud_high: 8,  seeing: 2, transparency: 2 }
+      - { hour: "04", cloud: 8,  cloud_low: 2,  cloud_mid: 3,  cloud_high: 5,  seeing: 1, transparency: 1 }
   planets:
     - name: "Jupiter"
       dir: "SW"

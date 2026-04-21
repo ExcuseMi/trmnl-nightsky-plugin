@@ -1,5 +1,5 @@
 import asyncio, math, logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import aiohttp
 import ephem
@@ -33,6 +33,10 @@ _PLANET_CLASSES = [
 def _az_to_dir(az_rad: float) -> str:
     az_deg = math.degrees(az_rad) % 360
     return ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][round(az_deg / 45) % 8]
+
+
+def _wind_dir(deg: float) -> str:
+    return ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][round(deg / 45) % 8]
 
 
 def _get_planets(lat: str, lon: str) -> list[dict]:
@@ -86,7 +90,6 @@ def _compute_sun(lat: str, lon: str, tz_str: str) -> dict:
     obs.lon = lon
     obs.elevation = 0
     obs.date = datetime.now(timezone.utc).strftime("%Y/%m/%d %H:%M:%S")
-
     sun = ephem.Sun(obs)
 
     def _to_local(ephem_date) -> str | None:
@@ -173,14 +176,105 @@ def _compute_moon(lat: str, lon: str, tz_str: str) -> tuple[dict, str | None]:
     return {"phase": phase, "illumination": illumination, "rises": rises, "sets": sets}, best_from
 
 
-async def _fetch_clouds(session: aiohttp.ClientSession, lat: str, lon: str) -> dict:
+async def _fetch_weather(session: aiohttp.ClientSession, lat: str, lon: str) -> dict:
+    fields = (
+        "cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,"
+        "temperature_2m,dewpoint_2m,relative_humidity_2m,"
+        "wind_speed_10m,wind_direction_10m"
+    )
     url = (
         f"https://api.open-meteo.com/v1/forecast"
         f"?latitude={lat}&longitude={lon}"
-        f"&hourly=cloud_cover&forecast_days=1&timezone=UTC"
+        f"&hourly={fields}&forecast_days=2&timezone=UTC&wind_speed_unit=kmh"
     )
     async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:
         return await r.json(content_type=None)
+
+
+async def _fetch_seeing(session: aiohttp.ClientSession, lat: str, lon: str) -> dict:
+    url = (
+        f"http://www.7timer.info/bin/astro.php"
+        f"?lon={lon}&lat={lat}&ac=0&lang=en&unit=metric&output=json&tzshift=0"
+    )
+    async with session.get(url, timeout=aiohttp.ClientTimeout(total=12)) as r:
+        return await r.json(content_type=None)
+
+
+def _build_forecast(weather_raw: dict, seeing_raw: dict, now_utc: datetime, tz) -> dict:
+    # Parse 7timer seeing/transparency — keyed by UTC hour offset from init
+    seeing_series = []
+    init_dt = None
+    if isinstance(seeing_raw, dict) and "dataseries" in seeing_raw:
+        try:
+            init_dt = datetime.strptime(seeing_raw["init"], "%Y%m%d%H").replace(tzinfo=timezone.utc)
+            seeing_series = seeing_raw["dataseries"]
+        except Exception:
+            pass
+
+    def _seeing_at(utc_dt: datetime) -> tuple[int, int]:
+        if not init_dt or not seeing_series:
+            return 0, 0
+        offset_h = (utc_dt - init_dt).total_seconds() / 3600
+        nearest = min(seeing_series, key=lambda e: abs(e["timepoint"] - offset_h))
+        return nearest.get("seeing", 0), nearest.get("transparency", 0)
+
+    now_cond = {}
+    hourly = []
+
+    if not (isinstance(weather_raw, dict) and "hourly" in weather_raw):
+        return {"now": now_cond, "hourly": hourly}
+
+    h = weather_raw["hourly"]
+    times   = h.get("time", [])
+    clouds  = h.get("cloud_cover", [])
+    cl_low  = h.get("cloud_cover_low", [])
+    cl_mid  = h.get("cloud_cover_mid", [])
+    cl_high = h.get("cloud_cover_high", [])
+    temps   = h.get("temperature_2m", [])
+    dews    = h.get("dewpoint_2m", [])
+    rhs     = h.get("relative_humidity_2m", [])
+    winds   = h.get("wind_speed_10m", [])
+    wdirs   = h.get("wind_direction_10m", [])
+
+    now_prefix = now_utc.strftime("%Y-%m-%dT%H:")
+    idx = next((i for i, t in enumerate(times) if t.startswith(now_prefix)), 0)
+
+    def _v(arr, i, default=0):
+        return arr[i] if i < len(arr) else default
+
+    now_cond = {
+        "cloud":      _v(clouds, idx),
+        "cloud_low":  _v(cl_low, idx),
+        "cloud_mid":  _v(cl_mid, idx),
+        "cloud_high": _v(cl_high, idx),
+        "temp":       round(_v(temps, idx, 0)),
+        "dew_point":  round(_v(dews, idx, 0)),
+        "humidity":   round(_v(rhs, idx, 0)),
+        "wind_speed": round(_v(winds, idx, 0)),
+        "wind_dir":   _wind_dir(_v(wdirs, idx, 0)),
+    }
+
+    next6 = [_v(clouds, idx + j) for j in range(6) if idx + j < len(clouds)]
+    now_cond["next6h_avg"] = round(sum(next6) / len(next6)) if next6 else now_cond["cloud"]
+
+    for offset in range(8):
+        i = idx + offset
+        if i >= len(times):
+            break
+        t_utc = datetime.fromisoformat(times[i]).replace(tzinfo=timezone.utc)
+        t_local = t_utc.astimezone(tz)
+        seeing, transp = _seeing_at(t_utc)
+        hourly.append({
+            "hour":        t_local.strftime("%H"),
+            "cloud":       _v(clouds, i),
+            "cloud_low":   _v(cl_low, i),
+            "cloud_mid":   _v(cl_mid, i),
+            "cloud_high":  _v(cl_high, i),
+            "seeing":      seeing,
+            "transparency": transp,
+        })
+
+    return {"now": now_cond, "hourly": hourly}
 
 
 def _compute_verdict(bortle: int, illumination: int, cloud_now: int) -> dict:
@@ -218,30 +312,31 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str) -> di
         local_tz = ZoneInfo(tz_str)
     except (ZoneInfoNotFoundError, Exception):
         local_tz = timezone.utc
-    date_str = datetime.now(local_tz).strftime("%-d %b %Y")
+
+    now_utc  = datetime.now(timezone.utc)
+    date_str = now_utc.astimezone(local_tz).strftime("%-d %b %Y")
 
     moon, best_from = _compute_moon(lat, lon, tz_str)
     sun = _compute_sun(lat, lon, tz_str)
 
     async with aiohttp.ClientSession() as session:
-        cloud_raw = await _fetch_clouds(session, lat, lon)
+        weather_raw, seeing_raw = await asyncio.gather(
+            _fetch_weather(session, lat, lon),
+            _fetch_seeing(session, lat, lon),
+            return_exceptions=True,
+        )
 
-    clouds = {"now": 0, "next6h_avg": 0}
-    if isinstance(cloud_raw, dict) and "hourly" in cloud_raw:
-        hourly = cloud_raw["hourly"]
-        times  = hourly.get("time", [])
-        covers = hourly.get("cloud_cover", [])
-        now_prefix = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:")
-        idx = next((i for i, t in enumerate(times) if t.startswith(now_prefix)), 0)
-        clouds["now"]        = covers[idx] if idx < len(covers) else 0
-        next6 = covers[idx: idx + 6]
-        clouds["next6h_avg"] = round(sum(next6) / len(next6)) if next6 else clouds["now"]
-        clouds["hourly"]     = covers[idx: idx + 8]
-    else:
-        log.warning("Cloud fetch failed: %s", cloud_raw)
+    if isinstance(weather_raw, Exception):
+        log.warning("Weather fetch failed: %s", weather_raw)
+        weather_raw = {}
+    if isinstance(seeing_raw, Exception):
+        log.warning("Seeing fetch failed: %s", seeing_raw)
+        seeing_raw = {}
+
+    forecast = _build_forecast(weather_raw, seeing_raw, now_utc, local_tz)
 
     planets = _get_planets(lat, lon)
-    viewing = _compute_verdict(bortle_int, moon["illumination"], clouds["now"])
+    viewing = _compute_verdict(bortle_int, moon["illumination"], forecast["now"].get("cloud", 0))
     viewing["date"] = date_str
     if best_from:
         viewing["best_from"] = best_from
@@ -254,9 +349,9 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str) -> di
             "stars":           bortle_info["stars"],
             "stars_formatted": _format_stars(bortle_info["stars"]),
         },
-        "sun":     sun,
-        "moon":    moon,
-        "clouds":  clouds,
-        "planets": planets,
-        "viewing": viewing,
+        "sun":      sun,
+        "moon":     moon,
+        "forecast": forecast,
+        "planets":  planets,
+        "viewing":  viewing,
     }
