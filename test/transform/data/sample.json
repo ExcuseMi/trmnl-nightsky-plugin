@@ -1,0 +1,126 @@
+[
+  {
+    "name": "good conditions",
+    "input": {
+      "trmnl": {
+        "system": { "timestamp_utc": 1745280000 },
+        "plugin_settings": {
+          "instance_name": "Night Sky",
+          "strategy": "polling",
+          "dark_mode": "no",
+          "custom_fields_values": {
+            "lat": "51.5",
+            "lon": "-0.1",
+            "bortle": "4",
+            "timezone": "Europe/London"
+          }
+        }
+      },
+      "data": {
+        "sky": {
+          "bortle": 4,
+          "bortle_label": "Rural/suburban",
+          "nelm": 6.3,
+          "stars": 3200,
+          "stars_formatted": "3k+"
+        },
+        "moon": {
+          "phase": "Waxing Gibbous",
+          "illumination": 62,
+          "sets": "23:14",
+          "rises": "15:45"
+        },
+        "clouds": { "now": 15, "next6h_avg": 22 },
+        "planets": [
+          { "name": "Jupiter", "dir": "SW", "alt": 42 },
+          { "name": "Saturn",  "dir": "E",  "alt": 28 },
+          { "name": "Mars",    "dir": "S",  "alt": 35 }
+        ],
+        "viewing": {
+          "verdict": "Good",
+          "stars_text": "★★★",
+          "score": 7,
+          "best_from": "23:30"
+        }
+      }
+    }
+  },
+  {
+    "name": "poor conditions — cloudy full moon",
+    "input": {
+      "trmnl": {
+        "system": { "timestamp_utc": 1745280000 },
+        "plugin_settings": {
+          "instance_name": "Night Sky",
+          "strategy": "polling",
+          "dark_mode": "no",
+          "custom_fields_values": {
+            "lat": "51.5",
+            "lon": "-0.1",
+            "bortle": "8",
+            "timezone": "Europe/London"
+          }
+        }
+      },
+      "data": {
+        "sky": {
+          "bortle": 8,
+          "bortle_label": "City",
+          "nelm": 4.3,
+          "stars": 150,
+          "stars_formatted": "150"
+        },
+        "moon": {
+          "phase": "Full Moon",
+          "illumination": 99,
+          "sets": "06:12",
+          "rises": "19:45"
+        },
+        "clouds": { "now": 85, "next6h_avg": 78 },
+        "planets": [],
+        "viewing": {
+          "verdict": "Poor",
+          "stars_text": "★",
+          "score": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "no planets",
+    "input": {
+      "trmnl": {
+        "system": { "timestamp_utc": 1745280000 },
+        "plugin_settings": {
+          "instance_name": "Night Sky",
+          "strategy": "polling",
+          "dark_mode": "no",
+          "custom_fields_values": {}
+        }
+      },
+      "data": {
+        "sky": {
+          "bortle": 5,
+          "bortle_label": "Suburban",
+          "nelm": 5.8,
+          "stars": 1500,
+          "stars_formatted": "1k+"
+        },
+        "moon": {
+          "phase": "New Moon",
+          "illumination": 2,
+          "sets": "20:05",
+          "rises": "06:30"
+        },
+        "clouds": { "now": 5, "next6h_avg": 10 },
+        "planets": [],
+        "viewing": {
+          "verdict": "Excellent",
+          "stars_text": "★★★★",
+          "score": 9,
+          "best_from": "21:15"
+        }
+      }
+    }
+  }
+]

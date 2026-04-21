@@ -1,0 +1,8 @@
+services:
+  backend:
+    build: ./backend
+    container_name: trmnl-nightsky-backend
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"

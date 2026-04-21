@@ -1,0 +1,69 @@
+{% template main %}
+<div class="layout layout--col gap--small">
+
+  {% comment %} Verdict + sky quality {% endcomment %}
+  <div class="flex gap--medium align--center">
+    <span class="value{% if view == 1 %} value--xlarge{% elsif view == 2 or view == 3 %} value--large{% endif %}" style="line-height:1; flex-shrink:0">{{ viewing.stars_text }}</span>
+    <div class="flex flex--col gap--xsmall" style="flex:1; min-width:0">
+      <span class="title">{{ viewing.verdict }} viewing</span>
+      <span class="label label--small">Bortle {{ sky.bortle }} · {{ sky.bortle_label }}{% if view == 1 %} · NELM {{ sky.nelm }}{% endif %}</span>
+      {% if view == 1 %}
+        <span class="label label--small">~{{ sky.stars_formatted }} naked-eye stars</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% unless view == 4 %}
+
+  {% comment %} Moon + clouds row {% endcomment %}
+  <div class="flex gap--large{% if view == 3 %} flex--col gap--xsmall{% endif %}">
+    <div class="flex flex--col gap--xsmall" style="flex:1">
+      <span class="label label--underline">Moon</span>
+      <span class="label">{{ moon.phase }} · {{ moon.illumination }}%</span>
+      {% if view == 1 %}
+        {% if moon.rises %}<span class="label label--small">rises {{ moon.rises }}</span>{% endif %}
+        {% if moon.sets  %}<span class="label label--small">sets {{ moon.sets }}</span>{% endif %}
+      {% else %}
+        {% if moon.sets %}<span class="label label--small">sets {{ moon.sets }}</span>{% endif %}
+      {% endif %}
+    </div>
+    <div class="flex flex--col gap--xsmall" style="flex:1">
+      <span class="label label--underline">Clouds</span>
+      <span class="label">{{ clouds.now }}% now</span>
+      {% if view == 1 %}
+        <span class="label label--small">{{ clouds.next6h_avg }}% next 6 h</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% comment %} Planets {% endcomment %}
+  {% if view == 1 or view == 2 %}
+    <div class="flex flex--col gap--xsmall">
+      <span class="label label--underline">Planets above horizon</span>
+      {% if planets.size > 0 %}
+        <div class="flex gap--small flex--wrap">
+          {% assign planet_limit = 5 %}
+          {% if view == 2 %}{% assign planet_limit = 3 %}{% endif %}
+          {% for planet in planets limit: planet_limit %}
+            <span class="label">{{ planet.name }} {{ planet.dir }} {{ planet.alt }}°{% unless forloop.last %} ·{% endunless %}</span>
+          {% endfor %}
+        </div>
+      {% else %}
+        <span class="label label--small">None above horizon right now</span>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% comment %} Best window (full only) {% endcomment %}
+  {% if view == 1 and viewing.best_from %}
+    <span class="label label--small">Best window starts {{ viewing.best_from }}</span>
+  {% endif %}
+
+  {% endunless %}
+
+</div>
+<div class="title_bar">
+  <img class="image" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'/%3E%3C/svg%3E" alt="Night Sky">
+  <span class="title">{{ trmnl.plugin_settings.instance_name }}</span>
+</div>
+{% endtemplate %}

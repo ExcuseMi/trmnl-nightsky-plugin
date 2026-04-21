@@ -1,0 +1,52 @@
+# TRMNLP configuration
+# {{ env.VARIABLE }} interpolation is available here
+---
+watch:
+  - .trmnlp.yml
+  - src
+
+custom_fields: {}
+
+variables:
+  trmnl:
+    system:
+      timestamp_utc: 1745280000
+    plugin_settings:
+      instance_name: "Night Sky"
+      strategy: polling
+      dark_mode: "no"
+      no_screen_padding: "no"
+      custom_fields_values:
+        lat: "51.5"
+        lon: "-0.1"
+        bortle: "4"
+        timezone: "Europe/London"
+  sky:
+    bortle: 4
+    bortle_label: "Rural/suburban"
+    nelm: 6.3
+    stars: 3200
+    stars_formatted: "3k+"
+  moon:
+    phase: "Waxing Gibbous"
+    illumination: 62
+    sets: "23:14"
+    rises: "15:45"
+  clouds:
+    now: 15
+    next6h_avg: 22
+  planets:
+    - name: "Jupiter"
+      dir: "SW"
+      alt: 42
+    - name: "Saturn"
+      dir: "E"
+      alt: 28
+    - name: "Mars"
+      dir: "S"
+      alt: 35
+  viewing:
+    verdict: "Good"
+    stars_text: "★★★"
+    score: 7
+    best_from: "23:30"
