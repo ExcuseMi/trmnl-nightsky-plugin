@@ -6,7 +6,7 @@ static_data: ''
 polling_verb: get
 framework_version: 
 serverless_language: 
-polling_url: 'https://your-backend.example.com/data?location={{ custom_fields_values.location | url_encode }}&tz=###{{ trmnl.user.time_zone_iana }}'
+polling_url: 'https://trmnl.bettens.dev/nightsky/data?location={{ custom_fields_values.location | url_encode }}&tz=###{{ trmnl.user.time_zone_iana }}'
 polling_headers: ''
 polling_body: ''
 id: 290823
