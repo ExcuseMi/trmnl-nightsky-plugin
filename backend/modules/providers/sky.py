@@ -59,6 +59,7 @@ def _get_planets(lat: str, lon: str) -> list[dict]:
             visible.append({
                 "name":          name,
                 "dir":           _az_to_dir(float(body.az)),
+                "az":            round(math.degrees(float(body.az))),
                 "alt":           round(alt_deg),
                 "mag":           round(float(body.mag), 1),
                 "size":          round(float(body.size), 1),
@@ -223,7 +224,14 @@ def _compute_moon(lat: str, lon: str, tz_str: str) -> tuple[dict, str | None]:
     if illumination > 50 and sets:
         best_from = sets
 
-    return {"phase": phase, "illumination": illumination, "rises": rises, "sets": sets}, best_from
+    return {
+        "phase":        phase,
+        "illumination": illumination,
+        "rises":        rises,
+        "sets":         sets,
+        "alt":          round(math.degrees(float(moon.alt))),
+        "az":           round(math.degrees(float(moon.az))),
+    }, best_from
 
 
 async def _fetch_weather(session: aiohttp.ClientSession, lat: str, lon: str) -> dict:

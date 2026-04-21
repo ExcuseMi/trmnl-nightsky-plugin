@@ -32,6 +32,8 @@ variables:
     illumination: 26
     sets: "00:43"
     rises: "07:49"
+    alt: 32
+    az: 195
     days:
       - { label: "Tonight",  date: "21 Apr", phase: "Waxing Crescent", illumination: 26, waxing: true }
       - { label: "Tomorrow", date: "22 Apr", phase: "Waxing Crescent", illumination: 36, waxing: true }
@@ -61,24 +63,28 @@ variables:
   planets:
     - name: "Jupiter"
       dir: "SW"
+      az: 225
       alt: 42
       mag: -2.3
       size: 40.1
       constellation: "Taurus"
     - name: "Saturn"
       dir: "E"
+      az: 90
       alt: 28
       mag: 0.5
       size: 17.2
       constellation: "Aquarius"
     - name: "Mars"
       dir: "S"
+      az: 180
       alt: 35
       mag: -0.2
       size: 8.5
       constellation: "Gemini"
     - name: "Uranus"
       dir: "SE"
+      az: 135
       alt: 18
       mag: 5.8
       size: 3.7
