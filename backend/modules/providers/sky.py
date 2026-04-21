@@ -391,8 +391,8 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list) -> s
     t        = ts.now()
     observer = earth + wgs84.latlon(float(lat), float(lon))
 
-    # Batch compute all catalog star positions
-    astrometric = observer.at(t).observe(Star.from_dataframe(hip)).apparent()
+    # Batch compute all catalog star positions (skip .apparent() — no deflection needed for a chart)
+    astrometric = observer.at(t).observe(Star.from_dataframe(hip))
     alt, az, _  = astrometric.altaz()
     above       = alt.degrees > 0
     alt_v, az_v = alt.degrees[above], az.degrees[above]
