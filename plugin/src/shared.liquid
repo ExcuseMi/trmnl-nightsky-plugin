@@ -1,11 +1,12 @@
 {% template main %}
+{% assign moon_id = "moon-" | append_random %}
 <div class="layout layout--col gap--small">
 
   {% if view == 1 %}
     <div class="flex gap--medium stretch-y">
 
       <div class="flex flex--col gap--xsmall align--center" style="width:100px;flex-shrink:0">
-        <img id="moon-phase-{{ view }}" style="width:90px;height:90px" alt="moon">
+        <img id="{{ moon_id }}" style="width:90px;height:90px" alt="moon">
         <span class="label label--small" style="text-align:center">{{ moon.phase }}</span>
         <span class="label label--small" style="text-align:center">{{ moon.illumination }}%</span>
         {% if moon.rises %}<span class="label label--small">↑ {{ moon.rises }}</span>{% endif %}
@@ -55,7 +56,7 @@
   {% elsif view == 2 %}
     <div class="flex gap--medium">
       <div class="flex flex--col gap--xsmall align--center" style="width:70px;flex-shrink:0">
-        <img id="moon-phase-{{ view }}" style="width:60px;height:60px" alt="moon">
+        <img id="{{ moon_id }}" style="width:60px;height:60px" alt="moon">
         <span class="label label--small" style="text-align:center">{{ moon.illumination }}%</span>
         {% if moon.sets %}<span class="label label--small">↓ {{ moon.sets }}</span>{% endif %}
       </div>
@@ -74,7 +75,7 @@
 
   {% elsif view == 3 %}
     <div class="flex gap--small align--center">
-      <img id="moon-phase-{{ view }}" style="width:50px;height:50px;flex-shrink:0" alt="moon">
+      <img id="{{ moon_id }}" style="width:50px;height:50px;flex-shrink:0" alt="moon">
       <div class="flex flex--col gap--xsmall">
         <span class="title">{{ viewing.verdict }} {{ viewing.stars_text }}</span>
         <span class="label label--small">Bortle {{ sky.bortle }} · {{ sky.bortle_label }}</span>
@@ -84,7 +85,7 @@
 
   {% elsif view == 4 %}
     <div class="flex gap--small align--center">
-      <img id="moon-phase-{{ view }}" style="width:40px;height:40px;flex-shrink:0" alt="moon">
+      <img id="{{ moon_id }}" style="width:40px;height:40px;flex-shrink:0" alt="moon">
       <div class="flex flex--col gap--xsmall">
         <span class="label">{{ viewing.verdict }} {{ viewing.stars_text }}</span>
         <span class="label label--small">{{ moon.illumination }}% · {{ clouds.now }}%☁</span>
@@ -124,8 +125,8 @@
 
   var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">' + shape + '</svg>';
   var src = 'data:image/svg+xml;base64,' + btoa(svg);
-  var imgs = document.querySelectorAll('[id^="moon-phase-"]');
-  for (var i = 0; i < imgs.length; i++) { imgs[i].src = src; }
+  var el = document.getElementById('{{ moon_id }}');
+  if (el) el.src = src;
 })();
 </script>
 {% endtemplate %}
