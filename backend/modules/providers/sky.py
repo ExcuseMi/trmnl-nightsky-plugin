@@ -423,72 +423,66 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list) -> s
     alt_v, az_v = alt_deg[above], az_deg[above]
     mag_v       = hip["magnitude"].values[above]
 
-    # ── matplotlib polar chart ──────────────────────────────────────────────
-    PX = 220
-    fig = plt.figure(figsize=(PX / 100, PX / 100), dpi=100, facecolor="black")
-    ax  = fig.add_axes([0.08, 0.08, 0.84, 0.84], projection="polar", facecolor="black")
+    # ── matplotlib rectangular panoramic chart (full TRMNL width) ─────────────
+    W_PX, H_PX, DPI = 760, 200, 100
+    fig, ax = plt.subplots(figsize=(W_PX / DPI, H_PX / DPI), dpi=DPI)
+    fig.patch.set_facecolor("black")
+    ax.set_facecolor("black")
+    fig.subplots_adjust(left=0.04, right=0.99, top=0.88, bottom=0.14)
 
-    ax.set_theta_zero_location("N")
-    ax.set_theta_direction(-1)
-    ax.set_ylim(0, 1)
-    ax.set_yticks([])
-    ax.set_xticks([])
-    ax.grid(False)
-    ax.spines["polar"].set_color("#555")
-    ax.spines["polar"].set_linewidth(0.8)
+    # x = azimuth 0-360°, y = altitude 0-90°
+    ax.set_xlim(0, 360)
+    ax.set_ylim(0, 90)
+    ax.set_xticks([0, 90, 180, 270, 360])
+    ax.set_xticklabels(["N", "E", "S", "W", "N"],
+                       color="white", fontsize=9, fontweight="bold")
+    ax.set_yticks([30, 60])
+    ax.set_yticklabels(["30°", "60°"], color="#666", fontsize=7)
+    ax.tick_params(axis="both", length=0, pad=3)
 
-    # Altitude rings at 30 and 60 degrees
-    ring_theta = np.linspace(0, 2 * np.pi, 360)
-    for alt_ring in (30, 60):
-        ax.plot(ring_theta, np.full(360, 1 - alt_ring / 90),
-                color="#333", linewidth=0.5, linestyle="--", zorder=1)
+    for spine in ax.spines.values():
+        spine.set_edgecolor("#444")
 
-    # Stars — size and alpha scaled by magnitude
-    r_s     = 1 - alt_v / 90
-    theta_s = np.radians(az_v)
-    sizes   = np.clip((5.5 - mag_v) ** 2.2 * 0.4, 0.2, 30)
-    colors  = np.zeros((len(r_s), 4))
+    # Altitude gridlines
+    for alt_g in (30, 60):
+        ax.axhline(alt_g, color="#2a2a2a", linewidth=0.7, linestyle="--", zorder=1)
+    # Azimuth dividers at cardinal points
+    for az_g in (90, 180, 270):
+        ax.axvline(az_g, color="#2a2a2a", linewidth=0.7, linestyle="--", zorder=1)
+
+    # Stars
+    sizes  = np.clip((5.5 - mag_v) ** 2.2 * 0.5, 0.3, 40)
+    colors = np.zeros((len(alt_v), 4))
     colors[:, :3] = 1.0
-    colors[:, 3]  = np.clip((5.5 - mag_v) / 6.0, 0.25, 1.0)
-    ax.scatter(theta_s, r_s, s=sizes, c=colors, linewidths=0, zorder=2)
+    colors[:, 3]  = np.clip((5.5 - mag_v) / 6.0, 0.2, 1.0)
+    ax.scatter(az_v, alt_v, s=sizes, c=colors, linewidths=0, zorder=2)
 
     # Moon
     moon_alt = moon_data.get("alt", -1)
     if moon_alt > 0:
-        r_m   = 1 - moon_alt / 90
-        th_m  = math.radians(moon_data.get("az", 0))
-        illum = moon_data.get("illumination", 50)
+        moon_az  = moon_data.get("az", 0)
+        illum    = moon_data.get("illumination", 50)
         is_waxing = ("Waxing" in moon_data.get("phase", "")
                      or moon_data.get("phase") in ("New Moon", "First Quarter"))
-        ax.plot(th_m, r_m, "o", markersize=10, color="#ccc",
-                markeredgecolor="#666", markeredgewidth=0.5, zorder=4)
+        ax.plot(moon_az, moon_alt, "o", markersize=11, color="#ddd",
+                markeredgecolor="#888", markeredgewidth=0.5, zorder=4)
         if 2 < illum < 98:
-            shadow_alpha = abs(1 - illum / 50) * 0.9
-            ax.plot(th_m + (0 if is_waxing else math.pi), r_m,
-                    "o", markersize=10, color="black",
-                    alpha=shadow_alpha, zorder=5)
-        ax.text(th_m, r_m - 0.1, "Moon", ha="center", va="top",
-                fontsize=5.5, color="#bbb", zorder=6)
+            ax.plot(moon_az, moon_alt, "o", markersize=11, color="black",
+                    alpha=abs(1 - illum / 50) * 0.85, zorder=5)
+        ax.text(moon_az, moon_alt + 4, "Moon", ha="center", va="bottom",
+                fontsize=6, color="#aaa", zorder=6)
 
     # Planets
     for pl in planets:
-        r_p  = 1 - pl["alt"] / 90
-        th_p = math.radians(pl["az"])
         abbr = _PLANET_ABBR.get(pl["name"], pl["name"][:3])
-        ax.plot(th_p, r_p, "o", markersize=5, color="white",
-                markeredgecolor="#aaa", markeredgewidth=0.3, zorder=4)
-        ax.text(th_p, r_p - 0.08, abbr, ha="center", va="top",
-                fontsize=5.5, color="white", fontweight="bold", zorder=5)
-
-    # Cardinal direction labels
-    for label, az_deg in (("N", 0), ("E", 90), ("S", 180), ("W", 270)):
-        ax.text(math.radians(az_deg), 1.13, label,
-                ha="center", va="center", fontsize=8,
-                color="white", fontweight="bold")
+        ax.plot(pl["az"], pl["alt"], "o", markersize=5, color="white",
+                markeredgecolor="#888", markeredgewidth=0.4, zorder=4)
+        ax.text(pl["az"], pl["alt"] + 3, abbr, ha="center", va="bottom",
+                fontsize=6.5, color="white", fontweight="bold", zorder=5)
 
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=100,
-                facecolor="black", bbox_inches="tight", pad_inches=0.02)
+    fig.savefig(buf, format="png", dpi=DPI, facecolor="black",
+                bbox_inches=None, pad_inches=0)
     plt.close(fig)
     buf.seek(0)
     return "data:image/png;base64," + base64.b64encode(buf.read()).decode()

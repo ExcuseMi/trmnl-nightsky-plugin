@@ -14,22 +14,15 @@
 
     <div style="border-top:2px solid black;flex-shrink:0"></div>
 
-    {% comment %} ── Main: sky chart | hourly grid + conditions ── {% endcomment %}
-    <div class="flex gap--none" style="flex:1;min-height:0">
+    {% comment %} ── Sky chart — full width panorama ── {% endcomment %}
+    {% if data.sky.chart != "" %}
+      <img src="{{ data.sky.chart }}" style="width:100%;display:block;flex-shrink:0">
+    {% endif %}
 
-      {% comment %} Sky dome — backend-rendered SVG {% endcomment %}
-      {% if data.sky.chart != "" %}
-        <img src="{{ data.sky.chart }}" style="width:200px;height:200px;flex-shrink:0">
-      {% else %}
-        <div style="width:200px;height:200px;flex-shrink:0;border:1px solid #ccc;display:flex;align-items:center;justify-content:center">
-          <span class="label label--small" style="text-align:center">Sky chart<br>unavailable</span>
-        </div>
-      {% endif %}
+    <div style="border-top:1px solid #444;flex-shrink:0"></div>
 
-      <div style="border-left:1px solid black;margin:0 12px;flex-shrink:0"></div>
-
-      {% comment %} Hourly bars + conditions {% endcomment %}
-      <div class="flex flex--col gap--[4px]" style="flex:1;min-width:0">
+    {% comment %} ── Hourly grid + conditions ── {% endcomment %}
+    <div class="flex flex--col gap--[4px]" style="flex:1;min-height:0;min-width:0">
 
         <div class="flex gap--[3px]">
           <div style="width:52px;flex-shrink:0"></div>
@@ -94,7 +87,6 @@
           </div>
         </div>
 
-      </div>
     </div>
 
     <div style="border-top:1px solid black;flex-shrink:0"></div>
