@@ -1,56 +1,50 @@
-#
-# Changes to this file will be overwritten by `trmnlp pull`.
-#
-# Docs: https://help.trmnl.com/en/articles/10542599-importing-and-exporting-private-plugins#h_581fb988f0
-#
 ---
 strategy: polling
 no_screen_padding: 'no'
 dark_mode: 'no'
 static_data: ''
 polling_verb: get
-polling_url: 'https://your-backend.example.com/data?lat={{ custom_fields_values.lat }}&lon={{ custom_fields_values.lon }}&bortle={{ custom_fields_values.bortle }}&tz={{ custom_fields_values.timezone }}'
+framework_version: 
+serverless_language: 
+polling_url: https://your-backend.example.com/data?lat={{ custom_fields_values.lat }}&lon={{ custom_fields_values.lon }}&bortle={{ custom_fields_values.bortle }}&tz={{ custom_fields_values.timezone }}
 polling_headers: ''
 polling_body: ''
+id: 290823
+custom_fields:
+- keyname: author_info
+  name: About This Plugin
+  field_type: author_bio
+  description: Tonight's sky conditions for your location — Bortle scale, stars visible, moon phase, visible planets, and cloud cover.<br /><br /><strong>Data sources:</strong> <a href="https://aa.usno.navy.mil/data/api">USNO Astronomical API</a> · <a href="https://open-meteo.com">Open-Meteo</a>
+  github_url: https://github.com/ExcuseMi/trmnl-nightsky-plugin
+  category: nature
+- keyname: lat
+  field_type: string
+  name: Latitude
+  description: Your latitude in decimal degrees.<br /><strong>Examples:</strong> 51.5 (London) · 40.7 (New York) · -33.9 (Sydney)<br /><a href="https://www.latlong.net">Find your coordinates →</a>
+  placeholder: '51.5'
+- keyname: lon
+  field_type: string
+  name: Longitude
+  description: Your longitude in decimal degrees.<br /><strong>Examples:</strong> -0.1 (London) · -74.0 (New York) · 151.2 (Sydney)<br /><a href="https://www.latlong.net">Find your coordinates →</a>
+  placeholder: "-0.1"
+- keyname: bortle
+  field_type: select
+  name: Bortle Scale
+  description: Your local sky darkness (1 = darkest, 9 = brightest).<br />Not sure? <a href="https://lightpollutionmap.app">Look up your location on lightpollutionmap.app →</a>
+  options:
+  - 1 — Exceptional dark sky: '1'
+  - 2 — Truly dark sky: '2'
+  - 3 — Rural sky: '3'
+  - 4 — Rural/suburban transition: '4'
+  - 5 — Suburban sky: '5'
+  - 6 — Bright suburban sky: '6'
+  - 7 — Suburban/urban transition: '7'
+  - 8 — City sky: '8'
+  - 9 — Inner city sky: '9'
+  default: '5'
+- keyname: timezone
+  field_type: time_zone
+  name: Timezone
+  description: Your local timezone — used for moonrise/moonset times.
 name: Night Sky
 refresh_interval: 60
-custom_fields:
-  - keyname: author_info
-    name: About This Plugin
-    field_type: author_bio
-    description: 'Tonight''s sky conditions for your location — Bortle scale, stars visible, moon phase, visible planets, and cloud cover.<br /><br />Data: USNO Astronomical API · Open-Meteo'
-    github_url: https://github.com/ExcuseMi/trmnl-nightsky-plugin
-    category: nature
-
-  - keyname: lat
-    field_type: string
-    name: Latitude
-    description: 'Your latitude in decimal degrees.<br /><strong>Example:</strong> 51.5 (London) · 40.7 (New York) · -33.9 (Sydney)'
-    placeholder: '51.5'
-
-  - keyname: lon
-    field_type: string
-    name: Longitude
-    description: 'Your longitude in decimal degrees.<br /><strong>Example:</strong> -0.1 (London) · -74.0 (New York) · 151.2 (Sydney)'
-    placeholder: '-0.1'
-
-  - keyname: bortle
-    field_type: select
-    name: Bortle Scale
-    description: 'Your local sky darkness. Check <strong>lightpollutionmap.app</strong> if unsure.'
-    options:
-      - '1 — Exceptional dark sky': '1'
-      - '2 — Truly dark sky': '2'
-      - '3 — Rural sky': '3'
-      - '4 — Rural/suburban transition': '4'
-      - '5 — Suburban sky': '5'
-      - '6 — Bright suburban sky': '6'
-      - '7 — Suburban/urban transition': '7'
-      - '8 — City sky': '8'
-      - '9 — Inner city sky': '9'
-    default: '5'
-
-  - keyname: timezone
-    field_type: time_zone
-    name: Timezone
-    description: 'Your local timezone — used for moonrise/moonset times.'
