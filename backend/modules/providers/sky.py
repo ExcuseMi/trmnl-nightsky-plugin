@@ -110,6 +110,56 @@ def _compute_sun(lat: str, lon: str, tz_str: str) -> dict:
     return {"rises": rises, "sets": sets}
 
 
+def _moon_day(lat: str, lon: str, tz_str: str, offset_days: int) -> dict:
+    try:
+        tz = ZoneInfo(tz_str)
+    except (ZoneInfoNotFoundError, Exception):
+        tz = timezone.utc
+
+    target_utc = datetime.now(timezone.utc) + timedelta(days=offset_days)
+    target_local = target_utc.astimezone(tz)
+
+    obs = ephem.Observer()
+    obs.lat = lat
+    obs.lon = lon
+    obs.elevation = 0
+    obs.pressure = 0
+    obs.date = target_utc.strftime("%Y/%m/%d 20:00:00")  # evening reference
+
+    moon = ephem.Moon(obs)
+    sun  = ephem.Sun(obs)
+
+    illumination = round(moon.phase)
+    ecl_moon = ephem.Ecliptic(moon)
+    ecl_sun  = ephem.Ecliptic(sun)
+    elong_deg = math.degrees((ecl_moon.lon - ecl_sun.lon) % (2 * math.pi))
+
+    if   elong_deg <  22.5: phase = "New Moon"
+    elif elong_deg <  67.5: phase = "Waxing Crescent"
+    elif elong_deg < 112.5: phase = "First Quarter"
+    elif elong_deg < 157.5: phase = "Waxing Gibbous"
+    elif elong_deg < 202.5: phase = "Full Moon"
+    elif elong_deg < 247.5: phase = "Waning Gibbous"
+    elif elong_deg < 292.5: phase = "Last Quarter"
+    elif elong_deg < 337.5: phase = "Waning Crescent"
+    else:                   phase = "New Moon"
+
+    if offset_days == 0:
+        label = "Tonight"
+    elif offset_days == 1:
+        label = "Tomorrow"
+    else:
+        label = target_local.strftime("%a")
+
+    return {
+        "label":       label,
+        "date":        target_local.strftime("%-d %b"),
+        "phase":       phase,
+        "illumination": illumination,
+        "waxing":      elong_deg < 180,
+    }
+
+
 def _compute_moon(lat: str, lon: str, tz_str: str) -> tuple[dict, str | None]:
     try:
         tz = ZoneInfo(tz_str)
@@ -317,6 +367,7 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str) -> di
     date_str = now_utc.astimezone(local_tz).strftime("%-d %b %Y")
 
     moon, best_from = _compute_moon(lat, lon, tz_str)
+    moon["days"] = [_moon_day(lat, lon, tz_str, i) for i in range(4)]
     sun = _compute_sun(lat, lon, tz_str)
 
     async with aiohttp.ClientSession() as session:

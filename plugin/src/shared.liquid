@@ -119,21 +119,46 @@
 
     <div style="border-top:1px solid black;flex-shrink:0"></div>
 
-    {% comment %} ── Planets ── {% endcomment %}
-    <div class="flex flex--col gap--xsmall">
-      <span class="label label--underline">Planets above horizon</span>
-      {% if planets.size > 0 %}
-        <div class="grid grid--cols-2 gap--xsmall">
-          {% for planet in planets limit: 6 %}
-            <div class="flex flex--col gap--[2px]">
-              <span class="label label--small">{{ planet.name }} {{ planet.dir }} {{ planet.alt }}°</span>
-              <span class="label label--small">mag {{ planet.mag }} · {{ planet.size }}" · {{ planet.constellation }}</span>
+    {% comment %} ── Moon forecast + Planets ── {% endcomment %}
+    {% assign mf_class = "mf-" | append_random %}
+    <div class="flex gap--none">
+
+      {% comment %} Moon 4-day forecast {% endcomment %}
+      <div class="flex flex--col gap--xsmall" style="flex-shrink:0">
+        <span class="label label--underline">Moon</span>
+        <div class="flex gap--small">
+          {% for day in moon.days %}
+            <div class="flex flex--col gap--[2px] align--center" style="width:52px">
+              <img class="{{ mf_class }}"
+                   data-illum="{{ day.illumination }}"
+                   data-waxing="{{ day.waxing }}"
+                   style="width:44px;height:44px" alt="{{ day.phase }}">
+              <span class="label label--small" style="text-align:center;font-size:9px">{{ day.label }}</span>
+              <span class="label label--small" style="text-align:center;font-size:9px">{{ day.illumination }}%</span>
             </div>
           {% endfor %}
         </div>
-      {% else %}
-        <span class="label label--small">None above horizon right now</span>
-      {% endif %}
+      </div>
+
+      <div style="border-left:1px solid black;margin:0 12px;flex-shrink:0"></div>
+
+      {% comment %} Planets {% endcomment %}
+      <div class="flex flex--col gap--xsmall" style="flex:1;min-width:0">
+        <span class="label label--underline">Planets above horizon</span>
+        {% if planets.size > 0 %}
+          <div class="grid grid--cols-2 gap--xsmall">
+            {% for planet in planets limit: 6 %}
+              <div class="flex flex--col gap--[2px]">
+                <span class="label label--small">{{ planet.name }} {{ planet.dir }} {{ planet.alt }}°</span>
+                <span class="label label--small">mag {{ planet.mag }} · {{ planet.size }}" · {{ planet.constellation }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <span class="label label--small">None above horizon right now</span>
+        {% endif %}
+      </div>
+
     </div>
 
   {% elsif view == 2 %}
@@ -213,6 +238,28 @@
   var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">' + shape + '</svg>';
   var el = document.getElementById('{{ moon_id }}');
   if (el) el.src = 'data:image/svg+xml;base64,' + btoa(svg);
+
+  function moonSvg(illum, isWaxing) {
+    var r = 38, c = 40, s;
+    if (illum <= 2) {
+      s = '<circle cx="'+c+'" cy="'+c+'" r="'+r+'" fill="black" stroke="black" stroke-width="2"/>';
+    } else if (illum >= 98) {
+      s = '<circle cx="'+c+'" cy="'+c+'" r="'+r+'" fill="white" stroke="black" stroke-width="2"/>';
+    } else {
+      var frac = illum / 100;
+      var ex = Math.round(r * Math.abs(1 - 2 * frac) * 10) / 10;
+      var bs = isWaxing ? 1 : 0, ts = frac < 0.5 ? bs : (1 - bs);
+      var d = 'M '+c+','+(c-r)+' A '+r+' '+r+' 0 0 '+bs+' '+c+','+(c+r)+' A '+ex+' '+r+' 0 0 '+ts+' '+c+','+(c-r)+' Z';
+      s = '<circle cx="'+c+'" cy="'+c+'" r="'+r+'" fill="black" stroke="black" stroke-width="2"/><path d="'+d+'" fill="white"/>';
+    }
+    return 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">'+s+'</svg>');
+  }
+
+  document.querySelectorAll('.{{ mf_class }}').forEach(function(img) {
+    var i = parseInt(img.getAttribute('data-illum') || '0');
+    var w = img.getAttribute('data-waxing') === 'true';
+    img.src = moonSvg(i, w);
+  });
 })();
 </script>
 {% endtemplate %}

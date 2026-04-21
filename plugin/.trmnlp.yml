@@ -28,10 +28,15 @@ variables:
     rises: "06:12"
     sets: "21:05"
   moon:
-    phase: "Waxing Gibbous"
-    illumination: 62
-    sets: "23:14"
-    rises: "15:45"
+    phase: "Waxing Crescent"
+    illumination: 26
+    sets: "00:43"
+    rises: "07:49"
+    days:
+      - { label: "Tonight",  date: "21 Apr", phase: "Waxing Crescent", illumination: 26, waxing: true }
+      - { label: "Tomorrow", date: "22 Apr", phase: "Waxing Crescent", illumination: 36, waxing: true }
+      - { label: "Thu",      date: "23 Apr", phase: "First Quarter",   illumination: 50, waxing: true }
+      - { label: "Fri",      date: "24 Apr", phase: "Waxing Gibbous",  illumination: 63, waxing: true }
   forecast:
     now:
       cloud: 15
