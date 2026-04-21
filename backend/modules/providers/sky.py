@@ -423,35 +423,36 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list) -> s
     alt_v, az_v = alt_deg[above], az_deg[above]
     mag_v       = hip["magnitude"].values[above]
 
-    # ── matplotlib rectangular panoramic chart (full TRMNL width) ─────────────
-    W_PX, H_PX, DPI = 760, 200, 100
+    # ── matplotlib rectangular panoramic chart (generated large for fullscreen) ─
+    W_PX, H_PX, DPI = 1304, 528, 100
     fig, ax = plt.subplots(figsize=(W_PX / DPI, H_PX / DPI), dpi=DPI)
     fig.patch.set_facecolor("black")
     ax.set_facecolor("black")
-    fig.subplots_adjust(left=0.04, right=0.99, top=0.88, bottom=0.14)
+    fig.subplots_adjust(left=0.03, right=0.995, top=0.91, bottom=0.09)
 
-    # x = azimuth 0-360°, y = altitude 0-90°
     ax.set_xlim(0, 360)
     ax.set_ylim(0, 90)
     ax.set_xticks([0, 90, 180, 270, 360])
     ax.set_xticklabels(["N", "E", "S", "W", "N"],
-                       color="white", fontsize=9, fontweight="bold")
+                       color="white", fontsize=13, fontweight="bold")
     ax.set_yticks([30, 60])
-    ax.set_yticklabels(["30°", "60°"], color="#666", fontsize=7)
-    ax.tick_params(axis="both", length=0, pad=3)
+    ax.set_yticklabels(["30°", "60°"], color="#555", fontsize=9)
+    ax.tick_params(axis="both", length=0, pad=4)
 
     for spine in ax.spines.values():
-        spine.set_edgecolor("#444")
+        spine.set_edgecolor("#333")
 
     # Altitude gridlines
     for alt_g in (30, 60):
-        ax.axhline(alt_g, color="#2a2a2a", linewidth=0.7, linestyle="--", zorder=1)
+        ax.axhline(alt_g, color="#222", linewidth=0.8, linestyle="--", zorder=1)
     # Azimuth dividers at cardinal points
     for az_g in (90, 180, 270):
-        ax.axvline(az_g, color="#2a2a2a", linewidth=0.7, linestyle="--", zorder=1)
+        ax.axvline(az_g, color="#222", linewidth=0.8, linestyle="--", zorder=1)
+    # Horizon label
+    ax.text(2, 1.5, "Horizon", color="#444", fontsize=8, va="bottom")
 
     # Stars
-    sizes  = np.clip((5.5 - mag_v) ** 2.2 * 0.5, 0.3, 40)
+    sizes  = np.clip((5.5 - mag_v) ** 2.2 * 0.8, 0.5, 60)
     colors = np.zeros((len(alt_v), 4))
     colors[:, :3] = 1.0
     colors[:, 3]  = np.clip((5.5 - mag_v) / 6.0, 0.2, 1.0)
@@ -464,21 +465,21 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list) -> s
         illum    = moon_data.get("illumination", 50)
         is_waxing = ("Waxing" in moon_data.get("phase", "")
                      or moon_data.get("phase") in ("New Moon", "First Quarter"))
-        ax.plot(moon_az, moon_alt, "o", markersize=11, color="#ddd",
-                markeredgecolor="#888", markeredgewidth=0.5, zorder=4)
+        ax.plot(moon_az, moon_alt, "o", markersize=16, color="#ddd",
+                markeredgecolor="#888", markeredgewidth=0.8, zorder=4)
         if 2 < illum < 98:
-            ax.plot(moon_az, moon_alt, "o", markersize=11, color="black",
+            ax.plot(moon_az, moon_alt, "o", markersize=16, color="black",
                     alpha=abs(1 - illum / 50) * 0.85, zorder=5)
-        ax.text(moon_az, moon_alt + 4, "Moon", ha="center", va="bottom",
-                fontsize=6, color="#aaa", zorder=6)
+        ax.text(moon_az, moon_alt + 3.5, "Moon", ha="center", va="bottom",
+                fontsize=8, color="#aaa", zorder=6)
 
     # Planets
     for pl in planets:
         abbr = _PLANET_ABBR.get(pl["name"], pl["name"][:3])
-        ax.plot(pl["az"], pl["alt"], "o", markersize=5, color="white",
-                markeredgecolor="#888", markeredgewidth=0.4, zorder=4)
+        ax.plot(pl["az"], pl["alt"], "o", markersize=7, color="white",
+                markeredgecolor="#888", markeredgewidth=0.5, zorder=4)
         ax.text(pl["az"], pl["alt"] + 3, abbr, ha="center", va="bottom",
-                fontsize=6.5, color="white", fontweight="bold", zorder=5)
+                fontsize=8, color="white", fontweight="bold", zorder=5)
 
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=DPI, facecolor="black",
