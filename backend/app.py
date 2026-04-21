@@ -2,6 +2,7 @@ import asyncio, logging
 from quart import Quart, jsonify, request
 from modules.utils.ip_whitelist import init_ip_whitelist, require_trmnl_ip
 from modules.providers.sky import build_sky_data, geocode
+from modules.providers.light_pollution import init_light_pollution, lookup_bortle
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -12,6 +13,7 @@ app = Quart(__name__)
 @app.before_serving
 async def _startup():
     await init_ip_whitelist()
+    await init_light_pollution()
 
 
 @app.route('/health')
@@ -25,7 +27,6 @@ async def data():
     location = request.args.get('location', '').strip()
     lat      = request.args.get('lat', '').strip()
     lon      = request.args.get('lon', '').strip()
-    bortle   = request.args.get('bortle', '5')
     tz       = request.args.get('tz', 'UTC')
 
     try:
@@ -36,7 +37,10 @@ async def data():
         elif not lat or not lon:
             lat, lon = '51.5', '-0.1'
 
-        payload = await build_sky_data(lat, lon, bortle, tz)
+        bortle = lookup_bortle(float(lat), float(lon))
+        bortle_str = str(bortle) if bortle else '5'
+
+        payload = await build_sky_data(lat, lon, bortle_str, tz)
         return jsonify(payload)
     except Exception as exc:
         log.exception('build_sky_data failed')

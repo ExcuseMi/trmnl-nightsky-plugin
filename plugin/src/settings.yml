@@ -6,7 +6,7 @@ static_data: ''
 polling_verb: get
 framework_version: 
 serverless_language: 
-polling_url: 'https://your-backend.example.com/data?location={{ custom_fields_values.location | url_encode }}&lat={{ custom_fields_values.lat | default: "" }}&lon={{ custom_fields_values.lon | default: "" }}&bortle={{ custom_fields_values.bortle }}&tz=###{{ trmnl.user.time_zone_iana }}'
+polling_url: 'https://your-backend.example.com/data?location={{ custom_fields_values.location | url_encode }}&lat={{ custom_fields_values.lat | default: "" }}&lon={{ custom_fields_values.lon | default: "" }}&tz=###{{ trmnl.user.time_zone_iana }}'
 polling_headers: ''
 polling_body: ''
 id: 290823
@@ -14,7 +14,7 @@ custom_fields:
 - keyname: author_info
   name: About This Plugin
   field_type: author_bio
-  description: Tonight's sky conditions for your location — Bortle scale, stars visible, moon phase, visible planets, and cloud cover.<br /><br /><strong>Data sources:</strong> <a href="https://aa.usno.navy.mil/data/api">USNO Astronomical API</a> · <a href="https://open-meteo.com">Open-Meteo</a>
+  description: Tonight's sky conditions for your location — Bortle scale, stars visible, moon phase, visible planets, and cloud cover.<br /><br /><strong>Data sources:</strong> <a href="https://aa.usno.navy.mil/data/api">USNO Astronomical API</a> · <a href="https://open-meteo.com">Open-Meteo</a> · <a href="https://www.lightpollutionmap.info">lightpollutionmap.info</a> (VIIRS 2024)
   github_url: https://github.com/ExcuseMi/trmnl-nightsky-plugin
   category: nature
 - keyname: location
@@ -37,20 +37,5 @@ custom_fields:
   placeholder: "-0.1278"
   group: Location
   optional: true
-- keyname: bortle
-  field_type: select
-  name: Bortle Scale
-  description: Your local sky darkness (1 = darkest, 9 = brightest).<br />Not sure? <a href="https://lightpollutionmap.app">Look up your location on lightpollutionmap.app →</a>
-  options:
-  - 1 — Exceptional dark sky: '1'
-  - 2 — Truly dark sky: '2'
-  - 3 — Rural sky: '3'
-  - 4 — Rural/suburban transition: '4'
-  - 5 — Suburban sky: '5'
-  - 6 — Bright suburban sky: '6'
-  - 7 — Suburban/urban transition: '7'
-  - 8 — City sky: '8'
-  - 9 — Inner city sky: '9'
-  default: '5'
 name: Night Sky
 refresh_interval: 60

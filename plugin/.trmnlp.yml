@@ -18,7 +18,6 @@ variables:
       no_screen_padding: "no"
       custom_fields_values:
         location: "London, UK"
-        bortle: "4"
   sky:
     bortle: 4
     bortle_label: "Rural/suburban"
