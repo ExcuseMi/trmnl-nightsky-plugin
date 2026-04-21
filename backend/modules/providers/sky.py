@@ -189,6 +189,7 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str) -> di
         clouds["now"]        = covers[idx] if idx < len(covers) else 0
         next6 = covers[idx: idx + 6]
         clouds["next6h_avg"] = round(sum(next6) / len(next6)) if next6 else clouds["now"]
+        clouds["hourly"]     = covers[idx: idx + 8]
     else:
         log.warning("Cloud fetch failed: %s", cloud_raw)
 

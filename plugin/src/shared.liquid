@@ -1,93 +1,107 @@
 {% template main %}
 <div class="layout layout--col gap--small">
 
-  {% comment %} Verdict header {% endcomment %}
-  <div class="flex gap--small align--center">
-    <span class="title{% if view == 1 %} title--xlarge{% elsif view == 2 %} title--large{% endif %}" style="flex-shrink:0; line-height:1">{{ viewing.stars_text }}</span>
-    <div class="flex flex--col gap--xsmall">
-      <span class="title{% if view == 1 %} title--large{% endif %}">{{ viewing.verdict }} viewing</span>
-      <span class="label label--small">Bortle {{ sky.bortle }} · {{ sky.bortle_label }}{% if view == 1 or view == 2 %} · NELM {{ sky.nelm }}{% endif %}</span>
-      {% if view == 1 %}
-        <span class="label label--small">~{{ sky.stars_formatted }} naked-eye stars visible</span>
-      {% endif %}
-    </div>
-  </div>
-
-  {% unless view == 4 %}
-
-  {% comment %} Full view: 3-column grid {% endcomment %}
+  {% comment %} Full view: moon left, all data right {% endcomment %}
   {% if view == 1 %}
-    <div class="grid grid--cols-3 gap--small">
+    <div class="flex gap--medium stretch-y">
 
-      <div class="flex flex--col gap--xsmall">
-        <span class="label label--underline">Moon</span>
-        <span class="label">{{ moon.phase }}</span>
-        <span class="label label--small">{{ moon.illumination }}% illuminated</span>
-        {% if moon.rises %}<span class="label label--small">rises {{ moon.rises }}</span>{% endif %}
-        {% if moon.sets  %}<span class="label label--small">sets {{ moon.sets }}</span>{% endif %}
+      {% comment %} Moon column {% endcomment %}
+      <div class="flex flex--col gap--xsmall align--center" style="width:100px;flex-shrink:0">
+        <img src="data:image/svg+xml;base64,{{ moon.phase_svg }}" style="width:90px;height:90px" alt="moon">
+        <span class="label label--small" style="text-align:center">{{ moon.phase }}</span>
+        <span class="label label--small" style="text-align:center">{{ moon.illumination }}%</span>
+        {% if moon.rises %}<span class="label label--small">↑ {{ moon.rises }}</span>{% endif %}
+        {% if moon.sets  %}<span class="label label--small">↓ {{ moon.sets }}</span>{% endif %}
       </div>
 
-      <div class="flex flex--col gap--xsmall">
-        <span class="label label--underline">Clouds</span>
-        <span class="label">{{ clouds.now }}% now</span>
-        <span class="label label--small">{{ clouds.next6h_avg }}% next 6 h</span>
-      </div>
+      {% comment %} Data column {% endcomment %}
+      <div class="flex flex--col gap--small" style="flex:1;min-width:0">
 
-      <div class="flex flex--col gap--xsmall">
-        <span class="label label--underline">Planets</span>
-        {% if planets.size > 0 %}
-          {% for planet in planets limit: 4 %}
-            <span class="label label--small">{{ planet.name }} {{ planet.dir }} {{ planet.alt }}°</span>
-          {% endfor %}
-        {% else %}
-          <span class="label label--small">None above horizon</span>
+        <div class="flex flex--col gap--xsmall">
+          <div class="flex gap--small align--center">
+            <span class="title title--large">{{ viewing.verdict }}</span>
+            <span class="title">{{ viewing.stars_text }}</span>
+          </div>
+          <span class="label label--small">Bortle {{ sky.bortle }} · {{ sky.bortle_label }} · NELM {{ sky.nelm }}</span>
+          <span class="label label--small">~{{ sky.stars_formatted }} naked-eye stars</span>
+        </div>
+
+        <div class="flex flex--col gap--xsmall">
+          <span class="label label--underline">Clouds</span>
+          {% if clouds.hourly.size > 0 %}
+            <div class="flex gap--[3px] align--end" style="height:28px">
+              {% for val in clouds.hourly %}
+                {% assign bar_h = val | times: 28 | divided_by: 100 %}
+                <div style="background:black;width:12px;min-height:2px;height:{{ bar_h }}px"></div>
+              {% endfor %}
+            </div>
+          {% endif %}
+          <span class="label label--small">{{ clouds.now }}% now · {{ clouds.next6h_avg }}% next 6 h</span>
+        </div>
+
+        <div class="flex flex--col gap--xsmall">
+          <span class="label label--underline">Planets above horizon</span>
+          {% if planets.size > 0 %}
+            {% for planet in planets limit: 4 %}
+              <span class="label label--small">{{ planet.name }} {{ planet.dir }} {{ planet.alt }}°</span>
+            {% endfor %}
+          {% else %}
+            <span class="label label--small">None above horizon right now</span>
+          {% endif %}
+        </div>
+
+        {% if viewing.best_from %}
+          <span class="label label--small">Best window starts {{ viewing.best_from }}</span>
         {% endif %}
-      </div>
 
+      </div>
     </div>
 
-    {% if viewing.best_from %}
-      <span class="label label--small">Best window starts {{ viewing.best_from }}</span>
-    {% endif %}
-
-  {% comment %} Half-horizontal: 2 columns, no planets {% endcomment %}
+  {% comment %} Half-horizontal: moon icon left, compact data right {% endcomment %}
   {% elsif view == 2 %}
-    <div class="flex gap--large">
-      <div class="flex flex--col gap--xsmall" style="flex:1">
-        <span class="label label--underline">Moon</span>
-        <span class="label label--small">{{ moon.phase }} · {{ moon.illumination }}%</span>
-        {% if moon.sets %}<span class="label label--small">sets {{ moon.sets }}</span>{% endif %}
+    <div class="flex gap--medium">
+      <div class="flex flex--col gap--xsmall align--center" style="width:70px;flex-shrink:0">
+        <img src="data:image/svg+xml;base64,{{ moon.phase_svg }}" style="width:60px;height:60px" alt="moon">
+        <span class="label label--small" style="text-align:center">{{ moon.illumination }}%</span>
+        {% if moon.sets %}<span class="label label--small">↓ {{ moon.sets }}</span>{% endif %}
       </div>
-      <div class="flex flex--col gap--xsmall" style="flex:1">
-        <span class="label label--underline">Clouds</span>
-        <span class="label label--small">{{ clouds.now }}% now · {{ clouds.next6h_avg }}% next 6h</span>
-      </div>
-      <div class="flex flex--col gap--xsmall" style="flex:1">
-        <span class="label label--underline">Planets</span>
+      <div class="flex flex--col gap--xsmall" style="flex:1;min-width:0">
+        <div class="flex gap--small align--center">
+          <span class="title">{{ viewing.verdict }}</span>
+          <span class="label">{{ viewing.stars_text }}</span>
+        </div>
+        <span class="label label--small">Bortle {{ sky.bortle }} · {{ sky.bortle_label }} · NELM {{ sky.nelm }}</span>
+        <span class="label label--small">Clouds {{ clouds.now }}% now · {{ clouds.next6h_avg }}% next 6h</span>
         {% if planets.size > 0 %}
-          {% for planet in planets limit: 2 %}
-            <span class="label label--small">{{ planet.name }} {{ planet.dir }} {{ planet.alt }}°</span>
-          {% endfor %}
-        {% else %}
-          <span class="label label--small">None</span>
+          <span class="label label--small">
+            {% for planet in planets limit: 3 %}{{ planet.name }} {{ planet.alt }}°{% unless forloop.last %} · {% endunless %}{% endfor %}
+          </span>
         {% endif %}
       </div>
     </div>
 
-  {% comment %} Half-vertical: stacked {% endcomment %}
+  {% comment %} Half-vertical: stacked compact {% endcomment %}
   {% elsif view == 3 %}
-    <div class="flex flex--col gap--xsmall">
-      <span class="label label--underline">Moon</span>
-      <span class="label label--small">{{ moon.phase }} · {{ moon.illumination }}%{% if moon.sets %} · sets {{ moon.sets }}{% endif %}</span>
+    <div class="flex gap--small align--center">
+      <img src="data:image/svg+xml;base64,{{ moon.phase_svg }}" style="width:50px;height:50px;flex-shrink:0" alt="moon">
+      <div class="flex flex--col gap--xsmall">
+        <span class="title">{{ viewing.verdict }} {{ viewing.stars_text }}</span>
+        <span class="label label--small">Bortle {{ sky.bortle }} · {{ sky.bortle_label }}</span>
+        <span class="label label--small">{{ moon.phase }} {{ moon.illumination }}% · clouds {{ clouds.now }}%</span>
+      </div>
     </div>
-    <div class="flex flex--col gap--xsmall">
-      <span class="label label--underline">Clouds</span>
-      <span class="label label--small">{{ clouds.now }}% now · {{ clouds.next6h_avg }}% next 6 h</span>
+
+  {% comment %} Quadrant: ultra compact {% endcomment %}
+  {% elsif view == 4 %}
+    <div class="flex gap--small align--center">
+      <img src="data:image/svg+xml;base64,{{ moon.phase_svg }}" style="width:40px;height:40px;flex-shrink:0" alt="moon">
+      <div class="flex flex--col gap--xsmall">
+        <span class="label">{{ viewing.verdict }} {{ viewing.stars_text }}</span>
+        <span class="label label--small">{{ moon.illumination }}% · {{ clouds.now }}%☁</span>
+      </div>
     </div>
 
   {% endif %}
-
-  {% endunless %}
 
 </div>
 <div class="title_bar">

@@ -32,6 +32,7 @@ variables:
   clouds:
     now: 15
     next6h_avg: 22
+    hourly: [15, 20, 35, 50, 40, 28, 15, 10]
   planets:
     - name: "Jupiter"
       dir: "SW"
