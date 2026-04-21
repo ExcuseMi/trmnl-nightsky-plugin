@@ -53,6 +53,18 @@ def _get_planets(lat: str, lon: str) -> list[dict]:
     return sorted(visible, key=lambda x: -x["alt"])
 
 
+async def geocode(address: str) -> tuple[str | None, str | None]:
+    url = "https://nominatim.openstreetmap.org/search"
+    params = {"q": address, "format": "json", "limit": 1}
+    headers = {"User-Agent": "trmnl-nightsky-plugin/1.0"}
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as r:
+            results = await r.json(content_type=None)
+            if results:
+                return results[0]["lat"], results[0]["lon"]
+            return None, None
+
+
 async def _fetch_moon(session: aiohttp.ClientSession, lat: str, lon: str, tz_offset: float) -> dict:
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     url = f"https://aa.usno.navy.mil/api/rstt/oneday?date={today}&coords={lat},{lon}&tz={tz_offset}"

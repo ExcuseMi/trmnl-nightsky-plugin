@@ -1,7 +1,7 @@
 import asyncio, logging
 from quart import Quart, jsonify, request
 from modules.utils.ip_whitelist import init_ip_whitelist, require_trmnl_ip
-from modules.providers.sky import build_sky_data
+from modules.providers.sky import build_sky_data, geocode
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -22,12 +22,20 @@ async def health():
 @app.route('/data')
 @require_trmnl_ip
 async def data():
-    lat     = request.args.get('lat', '51.5')
-    lon     = request.args.get('lon', '-0.1')
-    bortle  = request.args.get('bortle', '5')
-    tz      = request.args.get('tz', 'UTC')
+    location = request.args.get('location', '').strip()
+    lat      = request.args.get('lat', '').strip()
+    lon      = request.args.get('lon', '').strip()
+    bortle   = request.args.get('bortle', '5')
+    tz       = request.args.get('tz', 'UTC')
 
     try:
+        if location:
+            lat, lon = await geocode(location)
+            if lat is None:
+                return jsonify({'error': f'Could not geocode: {location}'}), 400
+        elif not lat or not lon:
+            lat, lon = '51.5', '-0.1'
+
         payload = await build_sky_data(lat, lon, bortle, tz)
         return jsonify(payload)
     except Exception as exc:

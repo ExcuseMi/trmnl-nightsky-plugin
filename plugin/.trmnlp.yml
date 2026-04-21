@@ -17,10 +17,8 @@ variables:
       dark_mode: "no"
       no_screen_padding: "no"
       custom_fields_values:
-        lat: "51.5"
-        lon: "-0.1"
+        location: "London, UK"
         bortle: "4"
-        timezone: "Europe/London"
   sky:
     bortle: 4
     bortle_label: "Rural/suburban"

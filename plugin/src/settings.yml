@@ -6,7 +6,7 @@ static_data: ''
 polling_verb: get
 framework_version: 
 serverless_language: 
-polling_url: https://your-backend.example.com/data?lat={{ custom_fields_values.lat }}&lon={{ custom_fields_values.lon }}&bortle={{ custom_fields_values.bortle }}&tz={{ custom_fields_values.timezone }}
+polling_url: 'https://your-backend.example.com/data?location={{ custom_fields_values.location | url_encode }}&lat={{ custom_fields_values.lat | default: "" }}&lon={{ custom_fields_values.lon | default: "" }}&bortle={{ custom_fields_values.bortle }}&tz=###{{ trmnl.user.time_zone_iana }}'
 polling_headers: ''
 polling_body: ''
 id: 290823
@@ -17,16 +17,26 @@ custom_fields:
   description: Tonight's sky conditions for your location — Bortle scale, stars visible, moon phase, visible planets, and cloud cover.<br /><br /><strong>Data sources:</strong> <a href="https://aa.usno.navy.mil/data/api">USNO Astronomical API</a> · <a href="https://open-meteo.com">Open-Meteo</a>
   github_url: https://github.com/ExcuseMi/trmnl-nightsky-plugin
   category: nature
+- keyname: location
+  field_type: string
+  name: Location
+  description: 'City or address to use for sky conditions.<br /><strong>Examples:</strong> London, UK · Central Park, New York · Sydney, Australia<br />Takes priority over Latitude / Longitude if both are set.'
+  placeholder: London, UK
+  group: Location
 - keyname: lat
   field_type: string
   name: Latitude
-  description: Your latitude in decimal degrees.<br /><strong>Examples:</strong> 51.5 (London) · 40.7 (New York) · -33.9 (Sydney)<br /><a href="https://www.latlong.net">Find your coordinates →</a>
-  placeholder: '51.5'
+  description: 'Decimal degrees latitude — only used when no Location is set.<br /><a href="https://www.latlong.net" target="_blank">Find your coordinates →</a>'
+  placeholder: '51.5074'
+  group: Location
+  optional: true
 - keyname: lon
   field_type: string
   name: Longitude
-  description: Your longitude in decimal degrees.<br /><strong>Examples:</strong> -0.1 (London) · -74.0 (New York) · 151.2 (Sydney)<br /><a href="https://www.latlong.net">Find your coordinates →</a>
-  placeholder: "-0.1"
+  description: 'Decimal degrees longitude — only used when no Location is set.'
+  placeholder: "-0.1278"
+  group: Location
+  optional: true
 - keyname: bortle
   field_type: select
   name: Bortle Scale
@@ -42,9 +52,5 @@ custom_fields:
   - 8 — City sky: '8'
   - 9 — Inner city sky: '9'
   default: '5'
-- keyname: timezone
-  field_type: time_zone
-  name: Timezone
-  description: Your local timezone — used for moonrise/moonset times.
 name: Night Sky
 refresh_interval: 60
