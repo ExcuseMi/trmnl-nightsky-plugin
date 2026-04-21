@@ -12,18 +12,21 @@ from skyfield.api import Loader, Star, wgs84
 from skyfield.data import hipparcos
 
 _SF_LOADER: "Loader | None" = None
-_HIP_DF = None
-_SF_TS  = None
+_HIP_DF    = None
+_SF_TS     = None
+_SF_EARTH  = None
 
 def _skyfield():
-    global _SF_LOADER, _HIP_DF, _SF_TS
+    global _SF_LOADER, _HIP_DF, _SF_TS, _SF_EARTH
     if _HIP_DF is None:
         _SF_LOADER = Loader("/data/skyfield")
         _SF_TS     = _SF_LOADER.timescale()
+        eph        = _SF_LOADER("de421.bsp")   # ~17 MB, cached in /data/skyfield
+        _SF_EARTH  = eph["earth"]
         with _SF_LOADER.open(hipparcos.URL) as f:
             df = hipparcos.load_dataframe(f)
         _HIP_DF = df[df["magnitude"] <= 5.5].copy()
-    return _SF_TS, _HIP_DF
+    return _SF_TS, _HIP_DF, _SF_EARTH
 
 log = logging.getLogger(__name__)
 
@@ -384,12 +387,12 @@ _PLANET_ABBR = {
 
 
 def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list) -> str:
-    ts, hip = _skyfield()
-    t = ts.now()
-    earth_obs = wgs84.latlon(float(lat), float(lon)).at(t)
+    ts, hip, earth = _skyfield()
+    t        = ts.now()
+    observer = earth + wgs84.latlon(float(lat), float(lon))
 
     # Batch compute all catalog star positions
-    astrometric = earth_obs.observe(Star.from_dataframe(hip)).apparent()
+    astrometric = observer.at(t).observe(Star.from_dataframe(hip)).apparent()
     alt, az, _  = astrometric.altaz()
     above       = alt.degrees > 0
     alt_v, az_v = alt.degrees[above], az.degrees[above]
