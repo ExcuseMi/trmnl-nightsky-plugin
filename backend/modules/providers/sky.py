@@ -8,7 +8,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-from skyfield.api import Loader, Star, wgs84
+from skyfield.api import Loader, Star, wgs84  # Star/wgs84 kept for test_sky_chart.py
 from skyfield.data import hipparcos
 
 _SF_LOADER: "Loader | None" = None
@@ -387,15 +387,40 @@ _PLANET_ABBR = {
 
 
 def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list) -> str:
-    ts, hip, earth = _skyfield()
-    t        = ts.now()
-    observer = earth + wgs84.latlon(float(lat), float(lon))
+    ts, hip, _earth = _skyfield()
+    lat_f, lon_f = float(lat), float(lon)
 
-    # Batch compute all catalog star positions (skip .apparent() — no deflection needed for a chart)
-    astrometric = observer.at(t).observe(Star.from_dataframe(hip))
-    alt, az, _  = astrometric.altaz()
-    above       = alt.degrees > 0
-    alt_v, az_v = alt.degrees[above], az.degrees[above]
+    # Local Sidereal Time via GMST (accurate to ~1 arcmin — fine for a display chart)
+    jd   = ts.now().ut1
+    T    = (jd - 2451545.0) / 36525.0
+    gmst = (280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * T ** 2) % 360
+    lst  = (gmst + lon_f) % 360  # degrees
+
+    # Vectorised equatorial → horizontal
+    ra_deg  = hip["ra_hours"].values * 15.0
+    dec_rad = np.radians(hip["dec_degrees"].values)
+    ha_rad  = np.radians(lst - ra_deg)
+    lat_rad = math.radians(lat_f)
+
+    sin_alt = (np.sin(dec_rad) * math.sin(lat_rad)
+               + np.cos(dec_rad) * math.cos(lat_rad) * np.cos(ha_rad))
+    alt_rad = np.arcsin(np.clip(sin_alt, -1.0, 1.0))
+
+    cos_alt = np.cos(alt_rad)
+    safe    = cos_alt > 1e-10
+    cos_az  = np.where(
+        safe,
+        (np.sin(dec_rad) - np.sin(alt_rad) * math.sin(lat_rad))
+        / np.where(safe, cos_alt * math.cos(lat_rad), 1.0),
+        0.0,
+    )
+    az_rad = np.arccos(np.clip(cos_az, -1.0, 1.0))
+    az_rad = np.where(np.sin(ha_rad) > 0, 2 * np.pi - az_rad, az_rad)
+
+    alt_deg = np.degrees(alt_rad)
+    az_deg  = np.degrees(az_rad)
+    above   = alt_deg > 0
+    alt_v, az_v = alt_deg[above], az_deg[above]
     mag_v       = hip["magnitude"].values[above]
 
     # ── matplotlib polar chart ──────────────────────────────────────────────
