@@ -6,7 +6,7 @@ static_data: ''
 polling_verb: get
 framework_version: 
 serverless_language: 
-polling_url: 'https://your-backend.example.com/data?location={{ custom_fields_values.location | url_encode }}&lat={{ custom_fields_values.lat | default: "" }}&lon={{ custom_fields_values.lon | default: "" }}&tz=###{{ trmnl.user.time_zone_iana }}'
+polling_url: 'https://your-backend.example.com/data?location={{ custom_fields_values.location | url_encode }}&tz=###{{ trmnl.user.time_zone_iana }}'
 polling_headers: ''
 polling_body: ''
 id: 290823
@@ -20,22 +20,7 @@ custom_fields:
 - keyname: location
   field_type: string
   name: Location
-  description: 'City or address to use for sky conditions.<br /><strong>Examples:</strong> London, UK · Central Park, New York · Sydney, Australia<br />Takes priority over Latitude / Longitude if both are set.'
+  description: 'City or address to centre the sky report on.<br /><strong>Examples:</strong> London, UK · Central Park, New York · Sydney, Australia'
   placeholder: London, UK
-  group: Location
-- keyname: lat
-  field_type: string
-  name: Latitude
-  description: 'Decimal degrees latitude — only used when no Location is set.<br /><a href="https://www.latlong.net" target="_blank">Find your coordinates →</a>'
-  placeholder: '51.5074'
-  group: Location
-  optional: true
-- keyname: lon
-  field_type: string
-  name: Longitude
-  description: 'Decimal degrees longitude — only used when no Location is set.'
-  placeholder: "-0.1278"
-  group: Location
-  optional: true
 name: Night Sky
 refresh_interval: 60
