@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import aiohttp
 import ephem
+from ephem import AlwaysUpError, NeverUpError, CircumpolarError
 
 log = logging.getLogger(__name__)
 
@@ -65,11 +66,70 @@ async def geocode(address: str) -> tuple[str | None, str | None]:
             return None, None
 
 
-async def _fetch_moon(session: aiohttp.ClientSession, lat: str, lon: str, tz_offset: float) -> dict:
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    url = f"https://aa.usno.navy.mil/api/rstt/oneday?date={today}&coords={lat},{lon}&tz={tz_offset}"
-    async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:
-        return await r.json(content_type=None)
+def _compute_moon(lat: str, lon: str, tz_str: str) -> tuple[dict, str | None]:
+    try:
+        tz = ZoneInfo(tz_str)
+    except (ZoneInfoNotFoundError, Exception):
+        tz = timezone.utc
+
+    obs = ephem.Observer()
+    obs.lat = lat
+    obs.lon = lon
+    obs.elevation = 0
+    obs.pressure = 0
+    obs.date = datetime.now(timezone.utc).strftime("%Y/%m/%d %H:%M:%S")
+
+    moon = ephem.Moon(obs)
+    sun  = ephem.Sun(obs)
+
+    illumination = round(moon.phase)
+
+    ecl_moon = ephem.Ecliptic(moon)
+    ecl_sun  = ephem.Ecliptic(sun)
+    elong_deg = math.degrees((ecl_moon.lon - ecl_sun.lon) % (2 * math.pi))
+    if   elong_deg <  22.5: phase = "New Moon"
+    elif elong_deg <  67.5: phase = "Waxing Crescent"
+    elif elong_deg < 112.5: phase = "First Quarter"
+    elif elong_deg < 157.5: phase = "Waxing Gibbous"
+    elif elong_deg < 202.5: phase = "Full Moon"
+    elif elong_deg < 247.5: phase = "Waning Gibbous"
+    elif elong_deg < 292.5: phase = "Last Quarter"
+    elif elong_deg < 337.5: phase = "Waning Crescent"
+    else:                   phase = "New Moon"
+
+    def _to_local(ephem_date) -> str | None:
+        if ephem_date is None:
+            return None
+        dt = ephem.Date(ephem_date).datetime().replace(tzinfo=timezone.utc).astimezone(tz)
+        return dt.strftime("%H:%M")
+
+    rises = sets = None
+    try:
+        rises = _to_local(obs.next_rising(moon))
+    except (AlwaysUpError, NeverUpError, CircumpolarError):
+        pass
+    try:
+        sets = _to_local(obs.next_setting(moon))
+    except (AlwaysUpError, NeverUpError, CircumpolarError):
+        pass
+
+    best_from = None
+    try:
+        obs_twi = ephem.Observer()
+        obs_twi.lat = lat
+        obs_twi.lon = lon
+        obs_twi.elevation = 0
+        obs_twi.pressure = 0
+        obs_twi.horizon = '-18'
+        obs_twi.date = obs.date
+        best_from = _to_local(obs_twi.next_setting(sun, use_center=True))
+    except Exception:
+        pass
+
+    if illumination > 50 and sets:
+        best_from = sets
+
+    return {"phase": phase, "illumination": illumination, "rises": rises, "sets": sets}, best_from
 
 
 async def _fetch_clouds(session: aiohttp.ClientSession, lat: str, lon: str) -> dict:
@@ -80,22 +140,6 @@ async def _fetch_clouds(session: aiohttp.ClientSession, lat: str, lon: str) -> d
     )
     async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:
         return await r.json(content_type=None)
-
-
-def _tz_offset(tz_str: str) -> float:
-    try:
-        tz = ZoneInfo(tz_str)
-        return datetime.now(tz).utcoffset().total_seconds() / 3600
-    except (ZoneInfoNotFoundError, Exception):
-        return 0.0
-
-
-def _parse_phen(items: list, code: str) -> str | None:
-    for item in items:
-        if item.get("phen") == code:
-            t = item.get("time", "")
-            return t if t and t != "**:**" else None
-    return None
 
 
 def _compute_verdict(bortle: int, illumination: int, cloud_now: int) -> dict:
@@ -128,32 +172,11 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str) -> di
     bortle_str = bortle_str if bortle_str in BORTLE_MAP else "5"
     bortle_info = BORTLE_MAP[bortle_str]
     bortle_int = int(bortle_str)
-    tz_offset = _tz_offset(tz_str)
+
+    moon, best_from = _compute_moon(lat, lon, tz_str)
 
     async with aiohttp.ClientSession() as session:
-        moon_raw, cloud_raw = await asyncio.gather(
-            _fetch_moon(session, lat, lon, tz_offset),
-            _fetch_clouds(session, lat, lon),
-            return_exceptions=True,
-        )
-
-    # Moon
-    moon = {"phase": "Unknown", "illumination": 0, "sets": None, "rises": None}
-    if isinstance(moon_raw, dict) and not moon_raw.get("error"):
-        illum = moon_raw.get("fracillum", "0%").replace("%", "").strip()
-        moon["illumination"] = int(illum) if illum.isdigit() else 0
-        moon["phase"] = moon_raw.get("curphase", "Unknown")
-        moon["rises"] = _parse_phen(moon_raw.get("moondata", []), "R")
-        moon["sets"]  = _parse_phen(moon_raw.get("moondata", []), "S")
-    else:
-        log.warning("Moon fetch failed: %r", moon_raw)
-
-    # Civil twilight end → default best_from
-    best_from = None
-    if isinstance(moon_raw, dict):
-        best_from = _parse_phen(moon_raw.get("sundata", []), "EC")
-    if moon["illumination"] > 50 and moon["sets"]:
-        best_from = moon["sets"]
+        cloud_raw = await _fetch_clouds(session, lat, lon)
 
     # Clouds
     clouds = {"now": 0, "next6h_avg": 0}
@@ -163,7 +186,7 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str) -> di
         covers = hourly.get("cloud_cover", [])
         now_prefix = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:")
         idx = next((i for i, t in enumerate(times) if t.startswith(now_prefix)), 0)
-        clouds["now"]       = covers[idx] if idx < len(covers) else 0
+        clouds["now"]        = covers[idx] if idx < len(covers) else 0
         next6 = covers[idx: idx + 6]
         clouds["next6h_avg"] = round(sum(next6) / len(next6)) if next6 else clouds["now"]
     else:
