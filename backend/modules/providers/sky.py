@@ -146,7 +146,7 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str) -> di
         moon["rises"] = _parse_phen(moon_raw.get("moondata", []), "R")
         moon["sets"]  = _parse_phen(moon_raw.get("moondata", []), "S")
     else:
-        log.warning("Moon fetch failed: %s", moon_raw)
+        log.warning("Moon fetch failed: %r", moon_raw)
 
     # Civil twilight end → default best_from
     best_from = None
