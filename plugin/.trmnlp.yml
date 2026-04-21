@@ -24,6 +24,9 @@ variables:
     nelm: 6.3
     stars: 3200
     stars_formatted: "3k+"
+  sun:
+    rises: "06:12"
+    sets: "21:05"
   moon:
     phase: "Waxing Gibbous"
     illumination: 62
@@ -37,14 +40,30 @@ variables:
     - name: "Jupiter"
       dir: "SW"
       alt: 42
+      mag: -2.3
+      size: 40.1
+      constellation: "Taurus"
     - name: "Saturn"
       dir: "E"
       alt: 28
+      mag: 0.5
+      size: 17.2
+      constellation: "Aquarius"
     - name: "Mars"
       dir: "S"
       alt: 35
+      mag: -0.2
+      size: 8.5
+      constellation: "Gemini"
+    - name: "Uranus"
+      dir: "SE"
+      alt: 18
+      mag: 5.8
+      size: 3.7
+      constellation: "Aries"
   viewing:
     verdict: "Good"
     stars_text: "★★★"
     score: 7
     best_from: "23:30"
+    date: "22 Apr 2026"

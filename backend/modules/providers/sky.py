@@ -25,6 +25,8 @@ _PLANET_CLASSES = [
     ("Mars",    ephem.Mars),
     ("Jupiter", ephem.Jupiter),
     ("Saturn",  ephem.Saturn),
+    ("Uranus",  ephem.Uranus),
+    ("Neptune", ephem.Neptune),
 ]
 
 
@@ -46,10 +48,17 @@ def _get_planets(lat: str, lon: str) -> list[dict]:
         body.compute(obs)
         alt_deg = math.degrees(float(body.alt))
         if alt_deg > 5:
+            try:
+                constellation = ephem.constellation(body)[1]
+            except Exception:
+                constellation = ""
             visible.append({
-                "name": name,
-                "dir": _az_to_dir(float(body.az)),
-                "alt": round(alt_deg),
+                "name":          name,
+                "dir":           _az_to_dir(float(body.az)),
+                "alt":           round(alt_deg),
+                "mag":           round(float(body.mag), 1),
+                "size":          round(float(body.size), 1),
+                "constellation": constellation,
             })
     return sorted(visible, key=lambda x: -x["alt"])
 
@@ -64,6 +73,38 @@ async def geocode(address: str) -> tuple[str | None, str | None]:
             if results:
                 return results[0]["lat"], results[0]["lon"]
             return None, None
+
+
+def _compute_sun(lat: str, lon: str, tz_str: str) -> dict:
+    try:
+        tz = ZoneInfo(tz_str)
+    except (ZoneInfoNotFoundError, Exception):
+        tz = timezone.utc
+
+    obs = ephem.Observer()
+    obs.lat = lat
+    obs.lon = lon
+    obs.elevation = 0
+    obs.date = datetime.now(timezone.utc).strftime("%Y/%m/%d %H:%M:%S")
+
+    sun = ephem.Sun(obs)
+
+    def _to_local(ephem_date) -> str | None:
+        dt = ephem.Date(ephem_date).datetime().replace(tzinfo=timezone.utc).astimezone(tz)
+        return dt.strftime("%H:%M")
+
+    is_up = float(sun.alt) > 0
+    rises = sets = None
+    try:
+        sets = _to_local(obs.next_setting(sun) if is_up else obs.previous_setting(sun))
+    except (AlwaysUpError, NeverUpError, CircumpolarError):
+        pass
+    try:
+        rises = _to_local(obs.next_rising(sun))
+    except (AlwaysUpError, NeverUpError, CircumpolarError):
+        pass
+
+    return {"rises": rises, "sets": sets}
 
 
 def _compute_moon(lat: str, lon: str, tz_str: str) -> tuple[dict, str | None]:
@@ -173,12 +214,18 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str) -> di
     bortle_info = BORTLE_MAP[bortle_str]
     bortle_int = int(bortle_str)
 
+    try:
+        local_tz = ZoneInfo(tz_str)
+    except (ZoneInfoNotFoundError, Exception):
+        local_tz = timezone.utc
+    date_str = datetime.now(local_tz).strftime("%-d %b %Y")
+
     moon, best_from = _compute_moon(lat, lon, tz_str)
+    sun = _compute_sun(lat, lon, tz_str)
 
     async with aiohttp.ClientSession() as session:
         cloud_raw = await _fetch_clouds(session, lat, lon)
 
-    # Clouds
     clouds = {"now": 0, "next6h_avg": 0}
     if isinstance(cloud_raw, dict) and "hourly" in cloud_raw:
         hourly = cloud_raw["hourly"]
@@ -195,6 +242,7 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str) -> di
 
     planets = _get_planets(lat, lon)
     viewing = _compute_verdict(bortle_int, moon["illumination"], clouds["now"])
+    viewing["date"] = date_str
     if best_from:
         viewing["best_from"] = best_from
 
@@ -206,6 +254,7 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str) -> di
             "stars":           bortle_info["stars"],
             "stars_formatted": _format_stars(bortle_info["stars"]),
         },
+        "sun":     sun,
         "moon":    moon,
         "clouds":  clouds,
         "planets": planets,
