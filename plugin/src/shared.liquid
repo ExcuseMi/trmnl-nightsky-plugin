@@ -47,7 +47,7 @@
 
       <div class="ns-overlay">
 
-        <span class="label label--small lg:label" style="color:#555">Viewing conditions · {{ data.viewing.date }}</span>
+        <span class="label label--underline lg:title">{{ data.viewing.date }}</span>
 
         <div class="divider"></div>
 
@@ -115,7 +115,7 @@
     {% elsif view == 2 %}
 
       <div class="ns-overlay">
-        <span class="label label--small lg:label" style="color:#555">Viewing conditions · {{ data.viewing.date }}</span>
+        <span class="label label--underline lg:title">{{ data.viewing.date }}</span>
         <div class="divider"></div>
         <div class="flex gap--small align--center">
           <img id="{{ moon_id }}" style="width:32px;height:32px;flex-shrink:0" alt="moon">
@@ -137,7 +137,7 @@
     {% elsif view == 3 %}
 
       <div class="ns-overlay">
-        <span class="label label--small lg:label" style="color:#555">Viewing conditions · {{ data.viewing.date }}</span>
+        <span class="label label--underline lg:title">{{ data.viewing.date }}</span>
         <div class="divider"></div>
         <div class="flex gap--small align--center">
           <img id="{{ moon_id }}" style="width:32px;height:32px;flex-shrink:0" alt="moon">
@@ -153,7 +153,7 @@
     {% elsif view == 4 %}
 
       <div class="ns-overlay" style="min-width:0;padding:5px 8px">
-        <span class="label label--small" style="color:#555;display:block;margin-bottom:3px">{{ data.viewing.date }}</span>
+        <span class="label label--underline" style="display:block;margin-bottom:3px">{{ data.viewing.date }}</span>
         <div class="flex gap--small align--center">
           <img id="{{ moon_id }}" style="width:24px;height:24px;flex-shrink:0" alt="moon">
           <div class="flex flex--col gap--[2px]">
