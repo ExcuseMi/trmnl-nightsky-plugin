@@ -342,7 +342,9 @@
     var px = pl.x, py = pl.y;
     if (px == null || py == null) return;
     var mag = parseFloat(pl.m);
-    var pr  = Math.max(1.5, Math.min(4.5, 3.5 - mag * 0.5));
+    var sf   = H / 480.0;
+    var area = Math.max(0.5 * sf, Math.min(60 * sf, Math.pow(6.2 - mag, 2.2) * 0.8 * sf));
+    var pr   = Math.sqrt(area / Math.PI) * (100 / 72);
     var dot = document.createElementNS(ns, 'circle');
     dot.setAttribute('cx', px.toFixed(1)); dot.setAttribute('cy', py.toFixed(1));
     dot.setAttribute('r', pr.toFixed(1)); dot.setAttribute('fill', dotFill);
