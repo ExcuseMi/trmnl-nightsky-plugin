@@ -462,7 +462,8 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
                         w_px: int = 800, h_px: int = 480,
                         constellations: str = 'names',
                         epoch: "datetime | None" = None,
-                        sun_data: "dict | None" = None) -> bytes:
+                        sun_data: "dict | None" = None,
+                        nelm: float = 6.2) -> bytes:
     ts, hip, _earth = _skyfield()
     lat_f, lon_f = float(lat), float(lon)
 
@@ -501,7 +502,7 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
     cos_daz, sin_daz = np.cos(daz_rad), np.sin(daz_rad)
     
     denom = 1 + sin_alt0 * np.sin(alt_rad) + cos_alt0 * cos_alt * cos_daz
-    visible_mask = (denom > 0.1) & (alt_deg > -10)
+    visible_mask = (denom > 0.1) & (alt_deg > -10) & (hip["magnitude"].values <= nelm)
     
     k = 2.0 / denom[visible_mask]
     x_proj = k * cos_alt[visible_mask] * sin_daz[visible_mask]

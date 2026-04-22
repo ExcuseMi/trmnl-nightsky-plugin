@@ -7,7 +7,7 @@ from modules.utils.ip_whitelist import init_ip_whitelist, require_trmnl_ip, trmn
 from modules.providers.sky import (
     build_sky_data, geocode,
     _compute_moon, _generate_sky_chart, _compute_sun,
-    get_astronomical_dusk,
+    get_astronomical_dusk, BORTLE_MAP,
 )
 from modules.providers.light_pollution import init_light_pollution, lookup_bortle
 
@@ -64,6 +64,7 @@ async def chart():
     w   = int(request.args.get('w', '800').lstrip('#') or 800)
     h   = int(request.args.get('h', '480').lstrip('#') or 480)
     hide_sun = request.args.get('hide_sun', 'false').lower() == 'true'
+    nelm     = float(request.args.get('nelm', '6.2'))
 
     if not await trmnl_ip_allowed():
         return _black_png(w, h)
@@ -77,7 +78,7 @@ async def chart():
         now   = datetime.now(timezone.utc)
         epoch = now.replace(minute=(now.minute // 5) * 5, second=0, microsecond=0)
 
-    cache_key = f"{lat}|{lon}|{tz}|{w}|{h}|{int(epoch.timestamp())}|{hide_sun}"
+    cache_key = f"{lat}|{lon}|{tz}|{w}|{h}|{int(epoch.timestamp())}|{hide_sun}|{nelm}"
 
     png = None
     if _redis:
@@ -94,7 +95,7 @@ async def chart():
             sun     = _compute_sun(lat, lon, tz, epoch=epoch)
             sun_data = {'alt': sun['alt'], 'az': sun['az']} if not hide_sun else None
             png      = _generate_sky_chart(lat, lon, moon, w, h, epoch=epoch,
-                                           sun_data=sun_data)
+                                           sun_data=sun_data, nelm=nelm)
         except Exception:
             log.exception('chart generation failed')
             return Response(status=500)
@@ -166,6 +167,7 @@ async def data():
         chart_params = {
             'lat': lat, 'lon': lon, 'tz': tz, 'w': cw_val, 'h': ch_val,
             't': int(snap.timestamp()),
+            'nelm': BORTLE_MAP.get(bortle_str, BORTLE_MAP['5'])['nelm'],
         }
         if daytime_mode == 'ignore':
             chart_params['hide_sun'] = 'true'

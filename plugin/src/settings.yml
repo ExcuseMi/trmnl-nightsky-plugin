@@ -5,7 +5,7 @@ dark_mode: 'no'
 static_data: ''
 polling_verb: get
 framework_version: 2.3.7
-serverless_language:
+serverless_language: 
 polling_url: 'https://trmnl.bettens.dev/nightsky/data?location={{ location | url_encode }}&tz={{ trmnl.user.time_zone_iana }}&w={{ trmnl.device.width | default: 800 }}&h={{ trmnl.device.height | default: 480 }}&constellations={{ constellations }}&daytime_mode={{ daytime_mode }}'
 polling_headers: ''
 polling_body: ''
@@ -25,11 +25,11 @@ custom_fields:
 - keyname: show_info_panel
   field_type: boolean
   name: Show Info Panel
-  description: "Show the conditions overlay on top of the star chart.<br /><strong>Includes:</strong> viewing verdict · moon phase &amp; rise/set · Bortle/NELM · cloud cover · temperature &amp; dew point · visible planets. Disable for a clean chart-only view."
+  description: Show the conditions overlay on top of the star chart.<br /><strong>Includes:</strong> viewing verdict · moon phase &amp; rise/set · Bortle/NELM · cloud cover · temperature &amp; dew point · visible planets. Disable for a clean chart-only view.
 - keyname: daytime_mode
   field_type: select
   name: During Daytime
-  description: "How the plugin behaves when the sun is above the horizon.<br /><strong>Earliest night</strong> fast-forwards the chart to astronomical dusk."
+  description: How the plugin behaves when the sun is above the horizon.<br /><strong>Earliest night</strong> fast-forwards the chart to astronomical dusk.
   options:
   - Show chart as if the sun wasn't there: ignore
   - Show chart from the earliest night time: earliest_night
@@ -38,7 +38,7 @@ custom_fields:
 - keyname: constellations
   field_type: select
   name: Constellations
-  description: "Draw constellation stick figures on the star chart.<br />Lines sourced from <a href=\"https://github.com/Stellarium/stellarium\">Stellarium</a> (Sky &amp; Telescope modern culture)."
+  description: Draw constellation stick figures on the star chart.<br />Lines sourced from <a href="https://github.com/Stellarium/stellarium">Stellarium</a> (Sky &amp; Telescope modern culture).
   options:
   - Show with names: names
   - Show lines only: lines
@@ -48,7 +48,7 @@ custom_fields:
 - keyname: show_planet_names
   field_type: boolean
   name: Show Planet Names
-  description: "Label each visible planet on the star chart.<br />Only planets <strong>above 5° altitude</strong> are shown."
+  description: Label each visible planet on the star chart.<br />Only planets <strong>above 5° altitude</strong> are shown.
 - keyname: time_format
   field_type: select
   name: Time Format
