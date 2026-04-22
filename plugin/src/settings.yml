@@ -6,7 +6,7 @@ static_data: ''
 polling_verb: get
 framework_version: 2.3.7
 serverless_language: 
-polling_url: https://trmnl.bettens.dev/nightsky/data?location={{ location | url_encode }}&tz={{ trmnl.user.time_zone_iana }}&w={{ trmnl.device.width }}&h={{ trmnl.device.height }}&constellations={{ constellations }}
+polling_url: https://trmnl.bettens.dev/nightsky/data?location={{ location | url_encode }}&tz={{ trmnl.user.time_zone_iana }}&w={{ trmnl.device.width }}&h={{ trmnl.device.height }}&constellations={{ constellations }}&hide_during_day={{ hide_during_day }}
 polling_headers: ''
 polling_body: ''
 id: 290823
@@ -32,6 +32,10 @@ custom_fields:
   - Hide: hide
   optional: true
   default: hide
+- keyname: hide_during_day
+  field_type: boolean
+  name: Hide During Daytime
+  description: Skip displaying this plugin while the sun is up. The next screen in your playlist will show instead.
 - keyname: show_planet_names
   field_type: boolean
   name: Show Planet Names

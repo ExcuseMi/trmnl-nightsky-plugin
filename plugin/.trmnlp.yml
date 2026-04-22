@@ -23,6 +23,7 @@ variables:
       custom_fields_values:
         location: "London, UK"
         constellations: "names"
+        hide_during_day: "false"
         show_planet_names: "true"
         show_info_panel: "true"
   data:
@@ -30,6 +31,7 @@ variables:
       bortle: 4
       bortle_label: "Rural/suburban"
       nelm: 6.3
+      is_day: true
       chart: ""
       chart_w: 800
       chart_h: 480

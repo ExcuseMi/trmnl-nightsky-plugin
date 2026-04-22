@@ -114,10 +114,11 @@ async def data():
     tz            = request.args.get('tz', 'UTC')
     w             = request.args.get('w', '800').lstrip('#') or '800'
     h             = request.args.get('h', '480').lstrip('#') or '480'
-    constellations = request.args.get('constellations', 'names').lstrip('#').lower()
+    constellations  = request.args.get('constellations', 'names').lstrip('#').lower()
     if constellations in ('yes', 'true'):  constellations = 'names'
     if constellations in ('no',  'false'): constellations = 'hide'
     if constellations not in ('names', 'lines', 'hide'): constellations = 'names'
+    hide_during_day = request.args.get('hide_during_day', 'false').lstrip('#').lower() in ('true', 'yes')
 
     try:
         if location:
@@ -144,6 +145,9 @@ async def data():
         payload['sky']['chart']   = chart_url
         payload['sky']['chart_w'] = int(w)
         payload['sky']['chart_h'] = int(h)
+
+        if hide_during_day and payload['sky'].get('is_day'):
+            payload['TRMNL_SKIP_DISPLAY'] = True
 
         return jsonify(payload)
     except Exception as exc:

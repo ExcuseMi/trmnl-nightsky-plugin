@@ -130,7 +130,7 @@ def _compute_sun(lat: str, lon: str, tz_str: str) -> dict:
     except (AlwaysUpError, NeverUpError, CircumpolarError):
         pass
 
-    return {"rises": rises, "sets": sets}
+    return {"rises": rises, "sets": sets, "is_day": is_up}
 
 
 def _moon_day(lat: str, lon: str, tz_str: str, offset_days: int) -> dict:
@@ -630,6 +630,7 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
     moon.pop("az", None)
     moon["days"] = [_moon_day(lat, lon, tz_str, i) for i in range(4)]
     sun = _compute_sun(lat, lon, tz_str)
+    is_day = sun.pop("is_day", False)
 
     async with aiohttp.ClientSession() as session:
         weather_raw = await _fetch_weather(session, lat, lon)
@@ -650,6 +651,7 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
             "bortle":       bortle_int,
             "bortle_label": bortle_info["label"],
             "nelm":         bortle_info["nelm"],
+            "is_day":       is_day,
         },
         "sun":            sun,
         "moon":           moon,
