@@ -63,8 +63,8 @@ async def chart():
         return _black_png(w, h)
 
     now       = datetime.now(timezone.utc)
-    utc_hr    = now.replace(minute=0, second=0, microsecond=0)
-    cache_key = f"{lat}|{lon}|{tz}|{w}|{h}|{utc_hr.isoformat()}"
+    snap      = now.replace(minute=(now.minute // 5) * 5, second=0, microsecond=0)
+    cache_key = f"{lat}|{lon}|{tz}|{w}|{h}|{snap.isoformat()}"
 
     if cache_key in _chart_cache:
         png = _chart_cache[cache_key]
@@ -72,8 +72,8 @@ async def chart():
     else:
         try:
             moon, _ = _compute_moon(lat, lon, tz)
-            png     = _generate_sky_chart(lat, lon, moon, w, h, epoch=utc_hr)
-            stale = [k for k in _chart_cache if not k.endswith(utc_hr.isoformat())]
+            png     = _generate_sky_chart(lat, lon, moon, w, h, epoch=snap)
+            stale = [k for k in _chart_cache if not k.endswith(snap.isoformat())]
             for k in stale:
                 del _chart_cache[k]
             _chart_cache[cache_key] = png
@@ -111,8 +111,9 @@ async def data():
         bortle     = lookup_bortle(float(lat), float(lon))
         bortle_str = str(bortle) if bortle else '5'
 
-        utc_hr  = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
-        payload = await build_sky_data(lat, lon, bortle_str, tz, constellations, utc_hr)
+        now     = datetime.now(timezone.utc)
+        snap    = now.replace(minute=(now.minute // 5) * 5, second=0, microsecond=0)
+        payload = await build_sky_data(lat, lon, bortle_str, tz, constellations, snap)
 
         # Build chart URL — prefer BASE_URL env var (proxy strips path prefix)
         base_url  = os.getenv('BASE_URL', '').rstrip('/') or \
