@@ -52,7 +52,7 @@ custom_fields:
 - keyname: realistic_stars
   field_type: boolean
   name: Realistic Star Count
-  description: "Limit stars to those actually visible under your local light pollution (Bortle/NELM).<br />When off, all catalog stars are shown regardless of sky brightness."
+  description: Limit stars to those actually visible under your local light pollution (Bortle/NELM).<br />When off, all catalog stars are shown regardless of sky brightness.
 - keyname: time_format
   field_type: select
   name: Time Format
