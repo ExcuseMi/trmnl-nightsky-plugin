@@ -16,9 +16,6 @@
     min-width: 210px;
     max-width: 260px;
   }
-  .ns-bar-row { display: flex; align-items: flex-end; gap: 2px; }
-  .ns-bar-label { width: 46px; flex-shrink: 0; align-self: center; }
-  .ns-bar { flex: 1; border: 1px solid #ccc; min-height: 2px; }
 </style>
 
 <div class="layout layout--stretch">
@@ -60,56 +57,6 @@
         </div>
 
         <div class="divider"></div>
-
-        <div class="flex gap--[2px]" style="margin-bottom:2px">
-          <div style="width:46px;flex-shrink:0"></div>
-          {% for h in data.forecast.hourly %}
-            <div style="flex:1;text-align:center"><span class="label label--small" style="font-size:8px">{{ h.hour }}</span></div>
-          {% endfor %}
-        </div>
-
-        <div class="ns-bar-row">
-          <div class="ns-bar-label"><span class="label label--small">☁</span></div>
-          {% for h in data.forecast.hourly %}
-            {% assign bh = h.cloud | times: 28 | divided_by: 100 %}
-            {% if h.cloud > 75 %}{% assign bg = "black" %}{% elsif h.cloud > 30 %}{% assign bg = "#888" %}{% else %}{% assign bg = "#ddd" %}{% endif %}
-            <div class="ns-bar" style="height:{{ bh | at_least: 2 }}px;background:{{ bg }}"></div>
-          {% endfor %}
-        </div>
-
-        {% assign has_seeing = false %}
-        {% for h in data.forecast.hourly %}{% if h.seeing > 0 %}{% assign has_seeing = true %}{% endif %}{% endfor %}
-        {% if has_seeing %}
-          <div class="ns-bar-row" style="margin-top:2px">
-            <div class="ns-bar-label"><span class="label label--small">seeing</span></div>
-            {% for h in data.forecast.hourly %}
-              {% if h.seeing > 0 %}
-                {% assign bh = h.seeing | minus: 1 | times: 28 | divided_by: 7 %}
-                {% if h.seeing >= 6 %}{% assign bg = "black" %}{% elsif h.seeing >= 4 %}{% assign bg = "#888" %}{% else %}{% assign bg = "#ddd" %}{% endif %}
-                <div class="ns-bar" style="height:{{ bh | at_least: 2 }}px;background:{{ bg }}"></div>
-              {% else %}
-                <div class="ns-bar" style="height:2px;background:#eee"></div>
-              {% endif %}
-            {% endfor %}
-          </div>
-        {% endif %}
-
-        {% assign has_transp = false %}
-        {% for h in data.forecast.hourly %}{% if h.transparency > 0 %}{% assign has_transp = true %}{% endif %}{% endfor %}
-        {% if has_transp %}
-          <div class="ns-bar-row" style="margin-top:2px">
-            <div class="ns-bar-label"><span class="label label--small">transp</span></div>
-            {% for h in data.forecast.hourly %}
-              {% if h.transparency > 0 %}
-                {% assign bh = h.transparency | minus: 1 | times: 28 | divided_by: 7 %}
-                {% if h.transparency >= 6 %}{% assign bg = "black" %}{% elsif h.transparency >= 4 %}{% assign bg = "#888" %}{% else %}{% assign bg = "#ddd" %}{% endif %}
-                <div class="ns-bar" style="height:{{ bh | at_least: 2 }}px;background:{{ bg }}"></div>
-              {% else %}
-                <div class="ns-bar" style="height:2px;background:#eee"></div>
-              {% endif %}
-            {% endfor %}
-          </div>
-        {% endif %}
 
         <div class="divider"></div>
 
