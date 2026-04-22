@@ -403,10 +403,6 @@ def _get_const_polylines() -> "dict[str, list[list[tuple[float, float]]]]":
     return result
 
 
-
-# fmt: on
-
-
 def _radec_altaz(ra_deg: float, dec_deg: float, lat_rad: float, lst: float) -> tuple[float, float]:
     dec_r   = math.radians(dec_deg)
     ha_r    = math.radians((lst - ra_deg) % 360)
@@ -534,8 +530,7 @@ def _constellation_svg_data(lat: str, lon: str, constellations: str,
 
     show_names = constellations == 'names'
     result = []
-    items = _get_const_polylines().items()
-    for name, polylines in items:
+    for name, polylines in _get_const_polylines().items():
         segs: list[list[float]] = []
         label_pts: list[tuple[float, float]] = []
         for polyline in polylines:
@@ -543,14 +538,34 @@ def _constellation_svg_data(lat: str, lon: str, constellations: str,
             for i in range(len(altaz) - 1):
                 alt1, az1 = altaz[i]
                 alt2, az2 = altaz[i + 1]
-                if alt1 > 0 and alt2 > 0 and abs(az1 - az2) < 180:
+                if alt1 <= 0 or alt2 <= 0:
+                    continue
+                if abs(az1 - az2) <= 180:
                     segs.append([round(az1, 1), round(alt1, 1), round(az2, 1), round(alt2, 1)])
+                else:
+                    # Segment crosses the az=0/360 boundary — split it at the edge.
+                    # Determine which side crosses 360→0 vs 0→360.
+                    if az1 > az2:
+                        # az1 near 360, az2 near 0
+                        t = (360.0 - az1) / (360.0 - az1 + az2)
+                        alt_x = alt1 + t * (alt2 - alt1)
+                        segs.append([round(az1, 1), round(alt1, 1), 360.0, round(alt_x, 1)])
+                        segs.append([0.0, round(alt_x, 1), round(az2, 1), round(alt2, 1)])
+                    else:
+                        # az1 near 0, az2 near 360
+                        t = az1 / (az1 + 360.0 - az2)
+                        alt_x = alt1 + t * (alt2 - alt1)
+                        segs.append([round(az1, 1), round(alt1, 1), 0.0, round(alt_x, 1)])
+                        segs.append([360.0, round(alt_x, 1), round(az2, 1), round(alt2, 1)])
             label_pts.extend((az, alt) for alt, az in altaz if alt > 2)
         if not segs:
             continue
         entry: dict = {"n": name, "ls": segs}
         if show_names and label_pts:
-            entry["laz"]  = round(sum(p[0] for p in label_pts) / len(label_pts), 1)
+            # Circular mean for azimuth to handle constellations straddling 0°/360°
+            sin_sum = sum(math.sin(math.radians(p[0])) for p in label_pts)
+            cos_sum = sum(math.cos(math.radians(p[0])) for p in label_pts)
+            entry["laz"]  = round(math.degrees(math.atan2(sin_sum, cos_sum)) % 360, 1)
             entry["lalt"] = round(sum(p[1] for p in label_pts) / len(label_pts), 1)
         result.append(entry)
     return result
