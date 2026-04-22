@@ -1,5 +1,5 @@
 import asyncio, io, logging, os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from urllib.parse import urlencode
 import redis.asyncio as aioredis
 from quart import Quart, jsonify, request, Response
@@ -7,6 +7,7 @@ from modules.utils.ip_whitelist import init_ip_whitelist, require_trmnl_ip, trmn
 from modules.providers.sky import (
     build_sky_data, geocode,
     _compute_moon, _generate_sky_chart, _compute_sun,
+    get_astronomical_dusk,
 )
 from modules.providers.light_pollution import init_light_pollution, lookup_bortle
 
@@ -62,6 +63,7 @@ async def chart():
     tz  = request.args.get('tz', 'UTC')
     w   = int(request.args.get('w', '800').lstrip('#') or 800)
     h   = int(request.args.get('h', '480').lstrip('#') or 480)
+    hide_sun = request.args.get('hide_sun', 'false').lower() == 'true'
 
     if not await trmnl_ip_allowed():
         return _black_png(w, h)
@@ -75,7 +77,7 @@ async def chart():
         now   = datetime.now(timezone.utc)
         epoch = now.replace(minute=(now.minute // 5) * 5, second=0, microsecond=0)
 
-    cache_key = f"{lat}|{lon}|{tz}|{w}|{h}|{int(epoch.timestamp())}"
+    cache_key = f"{lat}|{lon}|{tz}|{w}|{h}|{int(epoch.timestamp())}|{hide_sun}"
 
     png = None
     if _redis:
@@ -88,10 +90,11 @@ async def chart():
 
     if png is None:
         try:
-            moon, _ = _compute_moon(lat, lon, tz)
-            sun      = _compute_sun(lat, lon, tz)
+            moon, _ = _compute_moon(lat, lon, tz, epoch=epoch)
+            sun     = _compute_sun(lat, lon, tz, epoch=epoch)
+            sun_data = {'alt': sun['alt'], 'az': sun['az']} if not hide_sun else None
             png      = _generate_sky_chart(lat, lon, moon, w, h, epoch=epoch,
-                                           sun_data={'alt': sun['alt'], 'az': sun['az']})
+                                           sun_data=sun_data)
         except Exception:
             log.exception('chart generation failed')
             return Response(status=500)
@@ -120,7 +123,7 @@ async def data():
     if constellations in ('yes', 'true'):  constellations = 'names'
     if constellations in ('no',  'false'): constellations = 'hide'
     if constellations not in ('names', 'lines', 'hide'): constellations = 'names'
-    hide_during_day = request.args.get('hide_during_day', 'false').lstrip('#').lower() in ('true', 'yes')
+    daytime_mode = request.args.get('daytime_mode', 'ignore').lstrip('#').lower()
 
     try:
         if location:
@@ -133,23 +136,36 @@ async def data():
         bortle     = lookup_bortle(float(lat), float(lon))
         bortle_str = str(bortle) if bortle else '5'
 
-        now     = datetime.now(timezone.utc)
-        snap    = now.replace(minute=(now.minute // 5) * 5, second=0, microsecond=0)
+        now  = datetime.now(timezone.utc)
+        snap = now.replace(minute=(now.minute // 5) * 5, second=0, microsecond=0)
+
+        # Daytime handling
+        sun_now = _compute_sun(lat, lon, tz)
+        if sun_now['is_day']:
+            if daytime_mode == 'skip':
+                return jsonify({'TRMNL_SKIP_DISPLAY': True})
+            if daytime_mode == 'earliest_night':
+                dusk = get_astronomical_dusk(lat, lon, now)
+                # Snap dusk to nearest 5 mins for better caching
+                snap = dusk.replace(minute=(dusk.minute // 5) * 5, second=0, microsecond=0)
+
         payload = await build_sky_data(lat, lon, bortle_str, tz, constellations, snap)
 
         # Build chart URL — prefer BASE_URL env var (proxy strips path prefix)
         base_url  = os.getenv('BASE_URL', '').rstrip('/') or \
                     str(request.url).split('?')[0].rsplit('/', 1)[0]
-        chart_url = base_url + '/chart?' + urlencode({
+        
+        chart_params = {
             'lat': lat, 'lon': lon, 'tz': tz, 'w': w, 'h': h,
             't': int(snap.timestamp()),
-        })
+        }
+        if daytime_mode == 'ignore':
+            chart_params['hide_sun'] = 'true'
+
+        chart_url = base_url + '/chart?' + urlencode(chart_params)
         payload['sky']['chart']   = chart_url
         payload['sky']['chart_w'] = int(w)
         payload['sky']['chart_h'] = int(h)
-
-        if hide_during_day and payload['sky'].get('is_day'):
-            payload['TRMNL_SKIP_DISPLAY'] = True
 
         return jsonify(payload)
     except Exception as exc:

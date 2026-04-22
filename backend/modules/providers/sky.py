@@ -62,12 +62,13 @@ def _wind_dir(deg: float) -> str:
     return ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][round(deg / 45) % 8]
 
 
-def _get_planets(lat: str, lon: str) -> list[dict]:
+def _get_planets(lat: str, lon: str, epoch: "datetime | None" = None) -> list[dict]:
     obs = ephem.Observer()
     obs.lat = lat
     obs.lon = lon
     obs.elevation = 0
-    obs.date = datetime.now(timezone.utc).strftime("%Y/%m/%d %H:%M:%S")
+    ref = epoch or datetime.now(timezone.utc)
+    obs.date = ref.strftime("%Y/%m/%d %H:%M:%S")
 
     visible = []
     for name, PlanetClass in _PLANET_CLASSES:
@@ -102,7 +103,7 @@ async def geocode(address: str) -> tuple[str | None, str | None]:
             return None, None
 
 
-def _compute_sun(lat: str, lon: str, tz_str: str) -> dict:
+def _compute_sun(lat: str, lon: str, tz_str: str, epoch: "datetime | None" = None) -> dict:
     try:
         tz = ZoneInfo(tz_str)
     except (ZoneInfoNotFoundError, Exception):
@@ -112,21 +113,24 @@ def _compute_sun(lat: str, lon: str, tz_str: str) -> dict:
     obs.lat = lat
     obs.lon = lon
     obs.elevation = 0
-    obs.date = datetime.now(timezone.utc).strftime("%Y/%m/%d %H:%M:%S")
+    ref = epoch or datetime.now(timezone.utc)
+    obs.date = ref.strftime("%Y/%m/%d %H:%M:%S")
     sun = ephem.Sun(obs)
 
-    def _to_local(ephem_date) -> str | None:
-        dt = ephem.Date(ephem_date).datetime().replace(tzinfo=timezone.utc).astimezone(tz)
-        return dt.strftime("%H:%M")
+    def _to_epoch(ephem_date) -> int | None:
+        try:
+            return int(ephem.Date(ephem_date).datetime().replace(tzinfo=timezone.utc).timestamp())
+        except Exception:
+            return None
 
     is_up = float(sun.alt) > 0
     rises = sets = None
     try:
-        sets = _to_local(obs.next_setting(sun) if is_up else obs.previous_setting(sun))
+        sets = _to_epoch(obs.next_setting(sun) if is_up else obs.previous_setting(sun))
     except (AlwaysUpError, NeverUpError, CircumpolarError):
         pass
     try:
-        rises = _to_local(obs.next_rising(sun))
+        rises = _to_epoch(obs.next_rising(sun))
     except (AlwaysUpError, NeverUpError, CircumpolarError):
         pass
 
@@ -139,13 +143,30 @@ def _compute_sun(lat: str, lon: str, tz_str: str) -> dict:
     }
 
 
-def _moon_day(lat: str, lon: str, tz_str: str, offset_days: int) -> dict:
+def get_astronomical_dusk(lat: str, lon: str, dt_utc: datetime) -> datetime:
+    obs = ephem.Observer()
+    obs.lat = lat
+    obs.lon = lon
+    obs.elevation = 0
+    obs.pressure = 0
+    obs.horizon = '-18'
+    obs.date = dt_utc.strftime("%Y/%m/%d %H:%M:%S")
+    sun = ephem.Sun()
+    try:
+        dusk_ephem = obs.next_setting(sun, use_center=True)
+        return dusk_ephem.datetime().replace(tzinfo=timezone.utc)
+    except Exception:
+        return dt_utc
+
+
+def _moon_day(lat: str, lon: str, tz_str: str, offset_days: int, epoch: "datetime | None" = None) -> dict:
     try:
         tz = ZoneInfo(tz_str)
     except (ZoneInfoNotFoundError, Exception):
         tz = timezone.utc
 
-    target_utc = datetime.now(timezone.utc) + timedelta(days=offset_days)
+    ref = epoch or datetime.now(timezone.utc)
+    target_utc = ref + timedelta(days=offset_days)
     target_local = target_utc.astimezone(tz)
 
     obs = ephem.Observer()
@@ -188,7 +209,7 @@ def _moon_day(lat: str, lon: str, tz_str: str, offset_days: int) -> dict:
     }
 
 
-def _compute_moon(lat: str, lon: str, tz_str: str) -> tuple[dict, str | None]:
+def _compute_moon(lat: str, lon: str, tz_str: str, epoch: "datetime | None" = None) -> tuple[dict, str | None]:
     try:
         tz = ZoneInfo(tz_str)
     except (ZoneInfoNotFoundError, Exception):
@@ -199,7 +220,8 @@ def _compute_moon(lat: str, lon: str, tz_str: str) -> tuple[dict, str | None]:
     obs.lon = lon
     obs.elevation = 0
     obs.pressure = 0
-    obs.date = datetime.now(timezone.utc).strftime("%Y/%m/%d %H:%M:%S")
+    ref = epoch or datetime.now(timezone.utc)
+    obs.date = ref.strftime("%Y/%m/%d %H:%M:%S")
 
     moon = ephem.Moon(obs)
     sun  = ephem.Sun(obs)
@@ -219,19 +241,19 @@ def _compute_moon(lat: str, lon: str, tz_str: str) -> tuple[dict, str | None]:
     elif elong_deg < 337.5: phase = "Waning Crescent"
     else:                   phase = "New Moon"
 
-    def _to_local(ephem_date) -> str | None:
-        if ephem_date is None:
+    def _to_epoch(ephem_date) -> int | None:
+        try:
+            return int(ephem.Date(ephem_date).datetime().replace(tzinfo=timezone.utc).timestamp())
+        except Exception:
             return None
-        dt = ephem.Date(ephem_date).datetime().replace(tzinfo=timezone.utc).astimezone(tz)
-        return dt.strftime("%H:%M")
 
     rises = sets = None
     try:
-        rises = _to_local(obs.next_rising(moon))
+        rises = _to_epoch(obs.next_rising(moon))
     except (AlwaysUpError, NeverUpError, CircumpolarError):
         pass
     try:
-        sets = _to_local(obs.next_setting(moon))
+        sets = _to_epoch(obs.next_setting(moon))
     except (AlwaysUpError, NeverUpError, CircumpolarError):
         pass
 
@@ -244,7 +266,7 @@ def _compute_moon(lat: str, lon: str, tz_str: str) -> tuple[dict, str | None]:
         obs_twi.pressure = 0
         obs_twi.horizon = '-18'
         obs_twi.date = obs.date
-        best_from = _to_local(obs_twi.next_setting(sun, use_center=True))
+        best_from = _to_epoch(obs_twi.next_setting(sun, use_center=True))
     except Exception:
         pass
 
@@ -641,14 +663,15 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
     except (ZoneInfoNotFoundError, Exception):
         local_tz = timezone.utc
 
-    now_utc  = datetime.now(timezone.utc)
-    date_str = now_utc.astimezone(local_tz).strftime("%-d %b %Y")
+    ref_utc  = epoch or datetime.now(timezone.utc)
+    date_str = ref_utc.astimezone(local_tz).strftime("%-d %b %Y")
+    time_str = ref_utc.astimezone(local_tz).strftime("%H:%M")
 
-    moon, best_from = _compute_moon(lat, lon, tz_str)
+    moon, best_from = _compute_moon(lat, lon, tz_str, epoch=ref_utc)
     moon.pop("alt", None)
     moon.pop("az", None)
-    moon["days"] = [_moon_day(lat, lon, tz_str, i) for i in range(4)]
-    sun = _compute_sun(lat, lon, tz_str)
+    moon["days"] = [_moon_day(lat, lon, tz_str, i, epoch=ref_utc) for i in range(4)]
+    sun = _compute_sun(lat, lon, tz_str, epoch=ref_utc)
     is_day = sun.pop("is_day", False)
 
     async with aiohttp.ClientSession() as session:
@@ -657,11 +680,13 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
             log.warning("Weather fetch failed: %s", weather_raw)
             weather_raw = {}
 
-    forecast = _build_forecast(weather_raw, now_utc)
+    forecast = _build_forecast(weather_raw, ref_utc)
 
-    planets = _get_planets(lat, lon)
+    planets = _get_planets(lat, lon, epoch=ref_utc)
     viewing = _compute_verdict(bortle_int, moon["illumination"], forecast["now"].get("cloud", 0))
     viewing["date"] = date_str
+    viewing["chart_time"] = time_str
+    viewing["chart_epoch"] = int(ref_utc.timestamp())
     if best_from:
         viewing["best_from"] = best_from
 
@@ -677,5 +702,5 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
         "forecast":       forecast,
         "planets":        planets,
         "viewing":        viewing,
-        "constellations": _constellation_svg_data(lat, lon, constellations, epoch),
+        "constellations": _constellation_svg_data(lat, lon, constellations, ref_utc),
     }

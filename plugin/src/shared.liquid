@@ -5,6 +5,13 @@
 {% assign show_info         = trmnl.plugin_settings.custom_fields_values.show_info_panel %}
 {% assign show_planet_names = trmnl.plugin_settings.custom_fields_values.show_planet_names %}
 {% assign show_title_bar    = trmnl.plugin_settings.custom_fields_values.show_title_bar | default: "true" %}
+{% assign time_format       = trmnl.plugin_settings.custom_fields_values.time_format | default: "24h" %}
+
+{% if time_format == "12h" %}
+  {% assign time_format_str = "%I:%M %P" %}
+{% else %}
+  {% assign time_format_str = "%H:%M" %}
+{% endif %}
 
 <style>
   .ns-overlay {
@@ -53,7 +60,7 @@
           <div class="flex gap--small align--center">
             <span class="title lg:title--large">{{ data.viewing.verdict }}</span>
             {% if data.viewing.best_from %}
-              <span class="label label--small lg:label" style="margin-left:auto;flex-shrink:0">★ {{ data.viewing.best_from }}</span>
+              <span class="label label--small lg:label" style="margin-left:auto;flex-shrink:0">★ {{ data.viewing.best_from | plus: trmnl.user.utc_offset | date: time_format_str }}</span>
             {% endif %}
           </div>
           <span class="label label--small lg:label">Bortle {{ data.sky.bortle }} · {{ data.sky.bortle_label }} · NELM {{ data.sky.nelm }}</span>
@@ -65,8 +72,8 @@
             <div class="flex flex--col gap--[2px]">
               <span class="label lg:label--large">{{ data.moon.phase }} {{ data.moon.illumination }}%</span>
               <span class="label label--small lg:label--base">
-                {% if data.moon.rises %}↑{{ data.moon.rises }}{% endif %}
-                {% if data.moon.sets %} ↓{{ data.moon.sets }}{% endif %}
+                {% if data.moon.rises %}↑{{ data.moon.rises | plus: trmnl.user.utc_offset | date: time_format_str }}{% endif %}
+                {% if data.moon.sets %} ↓{{ data.moon.sets | plus: trmnl.user.utc_offset | date: time_format_str }}{% endif %}
               </span>
             </div>
           </div>
@@ -74,7 +81,7 @@
           <div class="divider"></div>
 
           <div class="flex flex--col gap--[3px]">
-            <span class="label label--small lg:label--base"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" width="11" height="11" style="vertical-align:-2px;display:inline-block"><circle cx="6" cy="6" r="2.5" fill="currentColor"/><line x1="6" y1="0.5" x2="6" y2="2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="6" y1="9.5" x2="6" y2="11.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="0.5" y1="6" x2="2.5" y2="6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="9.5" y1="6" x2="11.5" y2="6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg> ↓{{ data.sun.sets }} ↑{{ data.sun.rises }}{% if data.moon.sets %} · <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" width="10" height="11" style="vertical-align:-2px;display:inline-block"><defs><mask id="{{ pl_id }}-mc"><rect width="12" height="12" fill="white"/><circle cx="7.5" cy="4.5" r="4.5" fill="black"/></mask></defs><circle cx="5" cy="6.5" r="5" fill="currentColor" mask="url(#{{ pl_id }}-mc)"/></svg> ↓{{ data.moon.sets }}{% endif %}</span>
+            <span class="label label--small lg:label--base"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" width="11" height="11" style="vertical-align:-2px;display:inline-block"><circle cx="6" cy="6" r="2.5" fill="currentColor"/><line x1="6" y1="0.5" x2="6" y2="2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="6" y1="9.5" x2="6" y2="11.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="0.5" y1="6" x2="2.5" y2="6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="9.5" y1="6" x2="11.5" y2="6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg> ↓{{ data.sun.sets | plus: trmnl.user.utc_offset | date: time_format_str }} ↑{{ data.sun.rises | plus: trmnl.user.utc_offset | date: time_format_str }}{% if data.moon.sets %} · <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" width="10" height="11" style="vertical-align:-2px;display:inline-block"><defs><mask id="{{ pl_id }}-mc"><rect width="12" height="12" fill="white"/><circle cx="7.5" cy="4.5" r="4.5" fill="black"/></mask></defs><circle cx="5" cy="6.5" r="5" fill="currentColor" mask="url(#{{ pl_id }}-mc)"/></svg> ↓{{ data.moon.sets | plus: trmnl.user.utc_offset | date: time_format_str }}{% endif %}</span>
             <span class="label label--small lg:label--base"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7 13" width="7" height="12" style="vertical-align:-2px;display:inline-block"><rect x="2" y="0" width="3" height="7.5" rx="1.5" fill="currentColor"/><rect x="2.5" y="5.5" width="2" height="4" fill="currentColor"/><circle cx="3.5" cy="10.5" r="2.5" fill="currentColor"/></svg> {{ data.forecast.now.temp }}°C · <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 12" width="8" height="12" style="vertical-align:-2px;display:inline-block"><path d="M5 1C3 4 1 7 1 9a4 4 0 0 0 8 0C9 7 7 4 5 1Z" fill="currentColor"/></svg> {{ data.forecast.now.dew_point }}°C · <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 8" width="12" height="8" style="vertical-align:-1px;display:inline-block"><line x1="0.5" y1="2" x2="11.5" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="0.5" y1="6" x2="8.5" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> {{ data.forecast.now.wind_dir }} {{ data.forecast.now.wind_speed }} km/h</span>
             <span class="label label--small lg:label--base">RH {{ data.forecast.now.humidity }}% · ☁ L{{ data.forecast.now.cloud_low }}% M{{ data.forecast.now.cloud_mid }}% H{{ data.forecast.now.cloud_high }}%</span>
           </div>
@@ -124,7 +131,7 @@
           <div class="divider"></div>
           <div class="flex flex--col gap--[3px]">
             <span class="label label--small lg:label--base">Bortle {{ data.sky.bortle }} · NELM {{ data.sky.nelm }}</span>
-            <span class="label label--small lg:label--base"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" width="11" height="11" style="vertical-align:-2px;display:inline-block"><circle cx="6" cy="6" r="2.5" fill="currentColor"/><line x1="6" y1="0.5" x2="6" y2="2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="6" y1="9.5" x2="6" y2="11.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="0.5" y1="6" x2="2.5" y2="6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="9.5" y1="6" x2="11.5" y2="6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg> ↓{{ data.sun.sets }} ↑{{ data.sun.rises }} · ☁ {{ data.forecast.now.cloud }}% · <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7 13" width="7" height="12" style="vertical-align:-2px;display:inline-block"><rect x="2" y="0" width="3" height="7.5" rx="1.5" fill="currentColor"/><rect x="2.5" y="5.5" width="2" height="4" fill="currentColor"/><circle cx="3.5" cy="10.5" r="2.5" fill="currentColor"/></svg> {{ data.forecast.now.temp }}°C</span>
+            <span class="label label--small lg:label--base"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" width="11" height="11" style="vertical-align:-2px;display:inline-block"><circle cx="6" cy="6" r="2.5" fill="currentColor"/><line x1="6" y1="0.5" x2="6" y2="2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="6" y1="9.5" x2="6" y2="11.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="0.5" y1="6" x2="2.5" y2="6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="9.5" y1="6" x2="11.5" y2="6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg> ↓{{ data.sun.sets | plus: trmnl.user.utc_offset | date: time_format_str }} ↑{{ data.sun.rises | plus: trmnl.user.utc_offset | date: time_format_str }} · ☁ {{ data.forecast.now.cloud }}% · <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7 13" width="7" height="12" style="vertical-align:-2px;display:inline-block"><rect x="2" y="0" width="3" height="7.5" rx="1.5" fill="currentColor"/><rect x="2.5" y="5.5" width="2" height="4" fill="currentColor"/><circle cx="3.5" cy="10.5" r="2.5" fill="currentColor"/></svg> {{ data.forecast.now.temp }}°C</span>
             {% if data.planets.size > 0 %}
               <span class="label label--small lg:label--base">{% for planet in data.planets limit: 3 %}{{ planet.name }} {{ planet.dir }} {{ planet.alt }}°{% unless forloop.last %} · {% endunless %}{% endfor %}</span>
             {% endif %}
@@ -208,7 +215,8 @@
   var W = {{ cw }}, H = {{ ch }};
   var sunAlt = {{ data.sun.alt | default: -90 }};
   var sunAz  = {{ data.sun.az  | default: 0 }};
-  if (sunAlt > -5) {
+  var daytimeMode = {{ trmnl.plugin_settings.custom_fields_values.daytime_mode | json }};
+  if (daytimeMode !== 'ignore' && sunAlt > -5) {
     var sx = sunAz / 360 * W;
     var sy = (1 - Math.max(0, sunAlt) / 90) * H;
     if (!svg._nsPlaced) svg._nsPlaced = [];
@@ -356,7 +364,10 @@
     <circle cx="468" cy="192" r="15" fill="black"/>
     <circle cx="372" cy="22" r="15" fill="black"/>
   </svg>
-  <span class="title">{{ trmnl.plugin_settings.instance_name }}</span>
+  <span class="title">{{ trmnl.plugin_settings.instance_name | default: "Night Sky"}}</span>
+  <span class="instance" style="margin-left:auto">
+    {{ data.viewing.chart_epoch | plus: trmnl.user.utc_offset | date: time_format_str }}
+  </span>
 </div>
 {% endif %}
 {% endtemplate %}

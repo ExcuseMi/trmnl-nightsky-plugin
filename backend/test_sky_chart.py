@@ -73,13 +73,11 @@ def test_skyfield_observer():
 def test_chart_generation():
     _section("4. Full chart generation")
     moon = {"alt": 30, "az": 195, "illumination": 26, "phase": "Waxing Crescent"}
-    planets = [
-        {"name": "Jupiter", "alt": 42, "az": 225},
-        {"name": "Mars",    "alt": 35, "az": 180},
-    ]
-    chart = _generate_sky_chart("51.5074", "-0.1278", moon, planets)
-    assert chart.startswith("data:image/png;base64,"), "wrong prefix"
-    size_kb = len(chart) * 3 / 4 / 1024
+    # _generate_sky_chart no longer takes planets; it takes w_px, h_px, constellations, epoch, sun_data
+    chart = _generate_sky_chart("51.5074", "-0.1278", moon, 800, 480)
+    assert isinstance(chart, bytes), "should return bytes"
+    assert chart.startswith(b"\x89PNG"), "should be a PNG"
+    size_kb = len(chart) / 1024
     print(f"  chart size: {size_kb:.1f} KB")
     print("  PASS")
 

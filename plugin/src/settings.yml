@@ -6,7 +6,7 @@ static_data: ''
 polling_verb: get
 framework_version: 2.3.7
 serverless_language: 
-polling_url: https://trmnl.bettens.dev/nightsky/data?location={{ location | url_encode }}&tz={{ trmnl.user.time_zone_iana }}&w={{ trmnl.device.width }}&h={{ trmnl.device.height }}&constellations={{ constellations }}&hide_during_day={{ hide_during_day }}
+polling_url: https://trmnl.bettens.dev/nightsky/data?location={{ location | url_encode }}&tz={{ trmnl.user.time_zone_iana }}&w={{ trmnl.device.width }}&h={{ trmnl.device.height }}&constellations={{ constellations }}&daytime_mode={{ daytime_mode }}
 polling_headers: ''
 polling_body: ''
 id: 290823
@@ -36,10 +36,23 @@ custom_fields:
   field_type: boolean
   name: Show Title Bar
   description: Display the plugin name bar at the bottom of the screen.
-- keyname: hide_during_day
-  field_type: boolean
-  name: Hide During Daytime
-  description: Skip displaying this plugin while the sun is up. The next screen in your playlist will show instead.
+- keyname: daytime_mode
+  field_type: select
+  name: During Daytime
+  description: How the plugin should behave when the sun is up.
+  options:
+  - Show chart as if the sun wasn't there: ignore
+  - Show chart from the earliest night time: earliest_night
+  - Skip plugin display during the daytime: skip
+  default: ignore
+- keyname: time_format
+  field_type: select
+  name: Time Format
+  description: Display time in 24-hour or 12-hour (AM/PM) format.
+  options:
+  - 24-hour: 24h
+  - 12-hour (AM/PM): 12h
+  default: 24h
 - keyname: show_planet_names
   field_type: boolean
   name: Show Planet Names
