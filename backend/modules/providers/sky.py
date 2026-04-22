@@ -434,17 +434,6 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list) -> s
     ax.set_ylim(0, 90)
     ax.axis("off")
 
-    # Altitude gridlines
-    for alt_g in (30, 60):
-        ax.axhline(alt_g, color="#222", linewidth=0.8, linestyle="--", zorder=1)
-    # Azimuth dividers at cardinal points
-    for az_g in (90, 180, 270):
-        ax.axvline(az_g, color="#222", linewidth=0.8, linestyle="--", zorder=1)
-    # Cardinal labels
-    for az_l, label in ((0, "N"), (90, "E"), (180, "S"), (270, "W"), (360, "N")):
-        ax.text(az_l, 2, label, ha="center", va="bottom",
-                color="white", fontsize=13, fontweight="bold", zorder=6)
-
     # Stars
     sizes  = np.clip((5.5 - mag_v) ** 2.2 * 0.8, 0.5, 60)
     colors = np.zeros((len(alt_v), 4))
