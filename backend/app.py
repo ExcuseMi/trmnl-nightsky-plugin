@@ -159,11 +159,10 @@ async def data():
         # Build chart URL — prefer BASE_URL env var (proxy strips path prefix)
         base_url  = os.getenv('BASE_URL', '').rstrip('/') or \
                     str(request.url).split('?')[0].rsplit('/', 1)[0]
-        
-        # 1:1 scale: 90 degrees altitude = H height => 360 degrees azimuth = H * 4 width
+
+        cw_val = int(w)
         ch_val = int(h)
-        cw_val = ch_val * 4
-        
+
         chart_params = {
             'lat': lat, 'lon': lon, 'tz': tz, 'w': cw_val, 'h': ch_val,
             't': int(snap.timestamp()),
