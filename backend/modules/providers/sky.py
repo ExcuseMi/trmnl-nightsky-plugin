@@ -428,19 +428,11 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list) -> s
     fig, ax = plt.subplots(figsize=(W_PX / DPI, H_PX / DPI), dpi=DPI)
     fig.patch.set_facecolor("black")
     ax.set_facecolor("black")
-    fig.subplots_adjust(left=0.03, right=0.995, top=0.91, bottom=0.09)
+    fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
     ax.set_xlim(0, 360)
     ax.set_ylim(0, 90)
-    ax.set_xticks([0, 90, 180, 270, 360])
-    ax.set_xticklabels(["N", "E", "S", "W", "N"],
-                       color="white", fontsize=13, fontweight="bold")
-    ax.set_yticks([30, 60])
-    ax.set_yticklabels(["30°", "60°"], color="#555", fontsize=9)
-    ax.tick_params(axis="both", length=0, pad=4)
-
-    for spine in ax.spines.values():
-        spine.set_edgecolor("#333")
+    ax.axis("off")
 
     # Altitude gridlines
     for alt_g in (30, 60):
@@ -448,8 +440,10 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list) -> s
     # Azimuth dividers at cardinal points
     for az_g in (90, 180, 270):
         ax.axvline(az_g, color="#222", linewidth=0.8, linestyle="--", zorder=1)
-    # Horizon label
-    ax.text(2, 1.5, "Horizon", color="#444", fontsize=8, va="bottom")
+    # Cardinal labels
+    for az_l, label in ((0, "N"), (90, "E"), (180, "S"), (270, "W"), (360, "N")):
+        ax.text(az_l, 2, label, ha="center", va="bottom",
+                color="white", fontsize=13, fontweight="bold", zorder=6)
 
     # Stars
     sizes  = np.clip((5.5 - mag_v) ** 2.2 * 0.8, 0.5, 60)
