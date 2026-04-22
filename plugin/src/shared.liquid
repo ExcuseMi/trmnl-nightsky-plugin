@@ -33,7 +33,11 @@
   }
 </style>
 
+{% if show_title_bar == "true" %}
+<div class="layout">
+{% else %}
 <div class="layout layout--stretch">
+{% endif %}
 
   {% assign cw = data.sky.chart_w | default: 800 %}
   {% assign ch = data.sky.chart_h | default: 480 %}
@@ -172,6 +176,22 @@
     {% endif %}
 
   </div>
+
+{% if show_title_bar == "true" %}
+<div class="title_bar">
+  <svg class="image h--8 w--8" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+    <defs><mask id="ns-crescent"><rect width="512" height="512" fill="white"/><circle cx="306" cy="218" r="178" fill="black"/></mask></defs>
+    <circle cx="238" cy="256" r="212" fill="black" mask="url(#ns-crescent)"/>
+    <circle cx="404" cy="76" r="24" fill="black"/>
+    <circle cx="468" cy="192" r="15" fill="black"/>
+    <circle cx="372" cy="22" r="15" fill="black"/>
+  </svg>
+  <span class="title">{{ trmnl.plugin_settings.instance_name | default: "Night Sky"}}</span>
+  <span class="instance" style="margin-left:auto">
+    {{ data.viewing.chart_epoch | plus: trmnl.user.utc_offset | date: time_format_str }}
+  </span>
+</div>
+{% endif %}
 
 
 <script>
