@@ -1,4 +1,5 @@
 import asyncio, logging
+from urllib.parse import urlencode
 from quart import Quart, jsonify, request, Response
 from modules.utils.ip_whitelist import init_ip_whitelist, require_trmnl_ip
 from modules.providers.sky import (
@@ -70,11 +71,10 @@ async def data():
 
         # Build chart URL from this request's own base URL
         base_url  = str(request.url).split('?')[0].rsplit('/', 1)[0]
-        chart_url = (
-            f"{base_url}/chart"
-            f"?lat={lat}&lon={lon}&tz={tz}"
-            f"&w={w}&h={h}&constellations={constellations}"
-        )
+        chart_url = base_url + '/chart?' + urlencode({
+            'lat': lat, 'lon': lon, 'tz': tz,
+            'w': w, 'h': h, 'constellations': constellations,
+        })
         payload['sky']['chart'] = chart_url
 
         return jsonify(payload)
