@@ -228,30 +228,20 @@
 (function() {
   var svg = document.getElementById('{{ pl_id }}');
   if (!svg) return;
-  var W = {{ cw }}, H = {{ ch }};
   var placed = svg._nsPlaced || [];
   svg._nsPlaced = placed;
 
-  function reserve(az, alt, size) {
-    if (alt < -10) return;
-    var x = az / 360 * W, y = (1 - Math.max(0, alt) / 90) * H;
+  function reserveXY(x, y, size) {
+    if (x == null || y == null) return;
     var r = {x: x - size/2, y: y - size/2, w: size, h: size};
     placed.push(r);
-    if (r.x < 0) placed.push({x: r.x + W, y: r.y, w: r.w, h: r.h});
-    if (r.x + r.w > W) placed.push({x: r.x - W, y: r.y, w: r.w, h: r.h});
   }
 
   var daytimeMode = {{ trmnl.plugin_settings.custom_fields_values.daytime_mode | json }};
   if (daytimeMode !== 'ignore') {
-    reserve({{ data.sun.az | default: 0 }}, {{ data.sun.alt | default: -90 }}, 60);
+    reserveXY({{ data.sun.x | default: 'null' }}, {{ data.sun.y | default: 'null' }}, 60);
   }
-  
-  // Moon (approx az/alt from data for reservation)
-  var moonAz  = {{ data.moon.az | default: -1 }};
-  var moonAlt = {{ data.moon.alt | default: -90 }};
-  if (moonAz >= 0) {
-    reserve(moonAz, moonAlt, 50);
-  }
+  reserveXY({{ data.moon.x | default: 'null' }}, {{ data.moon.y | default: 'null' }}, 50);
 })();
 
 // Constellation lines + labels
@@ -273,13 +263,7 @@
 
   function overlaps(r) {
     return placed.some(function(e) {
-      function check(r1, r2) {
-        return r1.x < r2.x+r2.w+5 && r1.x+r1.w+5 > r2.x && r1.y < r2.y+r2.h+5 && r1.y+r1.h+5 > r2.y;
-      }
-      if (check(r, e)) return true;
-      if (r.x < 0 && check({x:r.x+W, y:r.y, w:r.w, h:r.h}, e)) return true;
-      if (r.x+r.w > W && check({x:r.x-W, y:r.y, w:r.w, h:r.h}, e)) return true;
-      return false;
+      return r.x < e.x+e.w+5 && r.x+r.w+5 > e.x && r.y < e.y+e.h+5 && r.y+r.h+5 > e.y;
     });
   }
 
@@ -287,10 +271,10 @@
   consts.forEach(function(c) {
     c.ls.forEach(function(s) {
       var line = document.createElementNS(ns, 'line');
-      line.setAttribute('x1', (s[0] / 360 * W).toFixed(1));
-      line.setAttribute('y1', ((1 - s[1] / 90) * H).toFixed(1));
-      line.setAttribute('x2', (s[2] / 360 * W).toFixed(1));
-      line.setAttribute('y2', ((1 - s[3] / 90) * H).toFixed(1));
+      line.setAttribute('x1', s[0].toFixed(1));
+      line.setAttribute('y1', s[1].toFixed(1));
+      line.setAttribute('x2', s[2].toFixed(1));
+      line.setAttribute('y2', s[3].toFixed(1));
       line.setAttribute('stroke', lineColor);
       line.setAttribute('stroke-width', '1.1');
       svg.appendChild(line);
@@ -299,8 +283,8 @@
 
   // 2. Draw all labels on top
   consts.forEach(function(c) {
-    if (c.laz === undefined) return;
-    var tx = c.laz / 360 * W, ty = (1 - c.lalt / 90) * H;
+    if (c.x === undefined) return;
+    var tx = c.x, ty = c.y;
     var t = document.createElementNS(ns, 'text');
     t.setAttribute('x', tx.toFixed(1)); t.setAttribute('y', ty.toFixed(1));
     t.setAttribute('text-anchor', 'middle'); t.setAttribute('dominant-baseline', 'middle');
@@ -308,11 +292,11 @@
     t.setAttribute('font-family', font);
     t.textContent = c.n;
     svg.appendChild(t);
-    
+
     var tw = t.getComputedTextLength() || (c.n.length * 6);
     var pad = 6, lh = 14;
     var r = {x: tx - tw/2 - pad/2, y: ty - lh/2, w: tw + pad, h: lh};
-    
+
     if (overlaps(r)) {
       svg.removeChild(t);
     } else {
@@ -322,17 +306,6 @@
       bg.setAttribute('width', r.w.toFixed(1)); bg.setAttribute('height', r.h.toFixed(1));
       bg.setAttribute('fill', bgFill); bg.setAttribute('rx', '2');
       svg.insertBefore(bg, t);
-      
-      // Handle edge wrapping for label
-      if (r.x < 0 || r.x + r.w > W) {
-        var tx2 = tx + (tx < W/2 ? W : -W);
-        var t2 = t.cloneNode(true);
-        t2.setAttribute('x', tx2.toFixed(1));
-        var bg2 = bg.cloneNode(true);
-        bg2.setAttribute('x', (r.x + (tx < W/2 ? W : -W)).toFixed(1));
-        svg.appendChild(bg2);
-        svg.appendChild(t2);
-      }
     }
   });
 })();
@@ -343,7 +316,7 @@
   if (!svg) return;
   var W = {{ cw }}, H = {{ ch }};
   var ns = 'http://www.w3.org/2000/svg';
-  var planets = [{% for pl in data.planets %}{"n":"{{ pl.name }}","az":{{ pl.az }},"alt":{{ pl.alt }},"m":{{ pl.mag }}}{% unless forloop.last %},{% endunless %}{% endfor %}];
+  var planets = [{% for pl in data.planets %}{"n":"{{ pl.name }}","x":{{ pl.x | default: 'null' }},"y":{{ pl.y | default: 'null' }},"m":{{ pl.mag }}}{% unless forloop.last %},{% endunless %}{% endfor %}];
   var showPlanetNames = (function() { var v = '{{ show_planet_names }}'; return v === 'yes' || v === 'true'; })();
   var placed = svg._nsPlaced || [];
   var ANCHORS = [{ax:0,ay:-1},{ax:1,ay:-1},{ax:1,ay:0},{ax:1,ay:1},{ax:0,ay:1},{ax:-1,ay:1},{ax:-1,ay:0},{ax:-1,ay:-1}];
@@ -361,16 +334,13 @@
       function check(r1, r2) {
         return r1.x < r2.x+r2.w+3 && r1.x+r1.w+3 > r2.x && r1.y < r2.y+r2.h+3 && r1.y+r1.h+3 > r2.y;
       }
-      if (check(r, e)) return true;
-      if (r.x < 0 && check({x:r.x+W, y:r.y, w:r.w, h:r.h}, e)) return true;
-      if (r.x+r.w > W && check({x:r.x-W, y:r.y, w:r.w, h:r.h}, e)) return true;
-      return false;
+      return check(r, e);
     });
   }
 
   planets.forEach(function(pl) {
-    var px = pl.az / 360 * W;
-    var py = (1 - pl.alt / 90) * H;
+    var px = pl.x, py = pl.y;
+    if (px == null || py == null) return;
     var mag = parseFloat(pl.m);
     var pr  = Math.max(1.5, Math.min(4.5, 3.5 - mag * 0.5));
     var dot = document.createElementNS(ns, 'circle');
@@ -381,8 +351,6 @@
     
     var dr = {x: px-pr-1, y: py-pr-1, w: (pr+1)*2, h: (pr+1)*2};
     placed.push(dr);
-    if (dr.x < 0) placed.push({x: dr.x+W, y: dr.y, w: dr.w, h: dr.h});
-    if (dr.x+dr.w > W) placed.push({x: dr.x-W, y: dr.y, w: dr.w, h: dr.h});
 
     if (!showPlanetNames) return;
 
