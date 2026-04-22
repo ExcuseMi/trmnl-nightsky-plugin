@@ -224,19 +224,33 @@
   });
 })();
 
-// Reserve sun area in collision grid
+// Reserve sun/moon areas in collision grid
 (function() {
   var svg = document.getElementById('{{ pl_id }}');
   if (!svg) return;
   var W = {{ cw }}, H = {{ ch }};
-  var sunAlt = {{ data.sun.alt | default: -90 }};
-  var sunAz  = {{ data.sun.az  | default: 0 }};
+  var placed = svg._nsPlaced || [];
+  svg._nsPlaced = placed;
+
+  function reserve(az, alt, size) {
+    if (alt < -10) return;
+    var x = az / 360 * W, y = (1 - Math.max(0, alt) / 90) * H;
+    var r = {x: x - size/2, y: y - size/2, w: size, h: size};
+    placed.push(r);
+    if (r.x < 0) placed.push({x: r.x + W, y: r.y, w: r.w, h: r.h});
+    if (r.x + r.w > W) placed.push({x: r.x - W, y: r.y, w: r.w, h: r.h});
+  }
+
   var daytimeMode = {{ trmnl.plugin_settings.custom_fields_values.daytime_mode | json }};
-  if (daytimeMode !== 'ignore' && sunAlt > -5) {
-    var sx = sunAz / 360 * W;
-    var sy = (1 - Math.max(0, sunAlt) / 90) * H;
-    if (!svg._nsPlaced) svg._nsPlaced = [];
-    svg._nsPlaced.push({x: sx - 30, y: sy - 30, w: 60, h: 60});
+  if (daytimeMode !== 'ignore') {
+    reserve({{ data.sun.az | default: 0 }}, {{ data.sun.alt | default: -90 }}, 60);
+  }
+  
+  // Moon (approx az/alt from data for reservation)
+  var moonAz  = {{ data.moon.az | default: -1 }};
+  var moonAlt = {{ data.moon.alt | default: -90 }};
+  if (moonAz >= 0) {
+    reserve(moonAz, moonAlt, 50);
   }
 })();
 
@@ -252,17 +266,24 @@
   var placed = svg._nsPlaced || [];
   svg._nsPlaced = placed;
 
-  var lineColor = 'rgba(255,255,255,0.22)';
-  var textFill  = 'rgba(255,255,255,0.75)';
-  var bgFill    = 'rgba(0,0,0,0.55)';
+  var lineColor = 'rgba(255,255,255,0.28)';
+  var textFill  = 'rgba(255,255,255,0.85)';
+  var bgFill    = 'rgba(0,0,0,0.6)';
   var font = 'var(--title-bar-font-family, var(--title-font-family, "NicoClear", monospace))';
 
   function overlaps(r) {
     return placed.some(function(e) {
-      return r.x < e.x+e.w+4 && r.x+r.w+4 > e.x && r.y < e.y+e.h+4 && r.y+r.h+4 > e.y;
+      function check(r1, r2) {
+        return r1.x < r2.x+r2.w+5 && r1.x+r1.w+5 > r2.x && r1.y < r2.y+r2.h+5 && r1.y+r1.h+5 > r2.y;
+      }
+      if (check(r, e)) return true;
+      if (r.x < 0 && check({x:r.x+W, y:r.y, w:r.w, h:r.h}, e)) return true;
+      if (r.x+r.w > W && check({x:r.x-W, y:r.y, w:r.w, h:r.h}, e)) return true;
+      return false;
     });
   }
 
+  // 1. Draw all lines first
   consts.forEach(function(c) {
     c.ls.forEach(function(s) {
       var line = document.createElementNS(ns, 'line');
@@ -271,27 +292,48 @@
       line.setAttribute('x2', (s[2] / 360 * W).toFixed(1));
       line.setAttribute('y2', ((1 - s[3] / 90) * H).toFixed(1));
       line.setAttribute('stroke', lineColor);
-      line.setAttribute('stroke-width', '0.8');
+      line.setAttribute('stroke-width', '1.1');
       svg.appendChild(line);
     });
+  });
+
+  // 2. Draw all labels on top
+  consts.forEach(function(c) {
     if (c.laz === undefined) return;
     var tx = c.laz / 360 * W, ty = (1 - c.lalt / 90) * H;
     var t = document.createElementNS(ns, 'text');
     t.setAttribute('x', tx.toFixed(1)); t.setAttribute('y', ty.toFixed(1));
     t.setAttribute('text-anchor', 'middle'); t.setAttribute('dominant-baseline', 'middle');
-    t.setAttribute('font-size', '9'); t.setAttribute('fill', textFill);
+    t.setAttribute('font-size', '10'); t.setAttribute('fill', textFill);
     t.setAttribute('font-family', font);
     t.textContent = c.n;
     svg.appendChild(t);
-    var tw = t.getComputedTextLength(), pad = 4, lh = 12;
+    
+    var tw = t.getComputedTextLength() || (c.n.length * 6);
+    var pad = 6, lh = 14;
     var r = {x: tx - tw/2 - pad/2, y: ty - lh/2, w: tw + pad, h: lh};
-    if (overlaps(r)) { svg.removeChild(t); return; }
-    placed.push(r);
-    var bg = document.createElementNS(ns, 'rect');
-    bg.setAttribute('x', r.x.toFixed(1)); bg.setAttribute('y', r.y.toFixed(1));
-    bg.setAttribute('width', r.w.toFixed(1)); bg.setAttribute('height', r.h.toFixed(1));
-    bg.setAttribute('fill', bgFill); bg.setAttribute('rx', '2');
-    svg.insertBefore(bg, t);
+    
+    if (overlaps(r)) {
+      svg.removeChild(t);
+    } else {
+      placed.push(r);
+      var bg = document.createElementNS(ns, 'rect');
+      bg.setAttribute('x', r.x.toFixed(1)); bg.setAttribute('y', r.y.toFixed(1));
+      bg.setAttribute('width', r.w.toFixed(1)); bg.setAttribute('height', r.h.toFixed(1));
+      bg.setAttribute('fill', bgFill); bg.setAttribute('rx', '2');
+      svg.insertBefore(bg, t);
+      
+      // Handle edge wrapping for label
+      if (r.x < 0 || r.x + r.w > W) {
+        var tx2 = tx + (tx < W/2 ? W : -W);
+        var t2 = t.cloneNode(true);
+        t2.setAttribute('x', tx2.toFixed(1));
+        var bg2 = bg.cloneNode(true);
+        bg2.setAttribute('x', (r.x + (tx < W/2 ? W : -W)).toFixed(1));
+        svg.appendChild(bg2);
+        svg.appendChild(t2);
+      }
+    }
   });
 })();
 
@@ -316,7 +358,13 @@
 
   function hits(r) {
     return placed.some(function(e) {
-      return r.x < e.x+e.w+3 && r.x+r.w+3 > e.x && r.y < e.y+e.h+3 && r.y+r.h+3 > e.y;
+      function check(r1, r2) {
+        return r1.x < r2.x+r2.w+3 && r1.x+r1.w+3 > r2.x && r1.y < r2.y+r2.h+3 && r1.y+r1.h+3 > r2.y;
+      }
+      if (check(r, e)) return true;
+      if (r.x < 0 && check({x:r.x+W, y:r.y, w:r.w, h:r.h}, e)) return true;
+      if (r.x+r.w > W && check({x:r.x-W, y:r.y, w:r.w, h:r.h}, e)) return true;
+      return false;
     });
   }
 
@@ -330,7 +378,11 @@
     dot.setAttribute('r', pr.toFixed(1)); dot.setAttribute('fill', dotFill);
     dot.setAttribute('stroke', dotStroke); dot.setAttribute('stroke-width', '1');
     svg.appendChild(dot);
-    placed.push({x: px-pr-1, y: py-pr-1, w: (pr+1)*2, h: (pr+1)*2});
+    
+    var dr = {x: px-pr-1, y: py-pr-1, w: (pr+1)*2, h: (pr+1)*2};
+    placed.push(dr);
+    if (dr.x < 0) placed.push({x: dr.x+W, y: dr.y, w: dr.w, h: dr.h});
+    if (dr.x+dr.w > W) placed.push({x: dr.x-W, y: dr.y, w: dr.w, h: dr.h});
 
     if (!showPlanetNames) return;
 

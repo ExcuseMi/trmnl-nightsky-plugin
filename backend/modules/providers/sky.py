@@ -477,23 +477,19 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
 
     # Stars
     sizes  = np.clip((5.5 - mag_v) ** 2.2 * 0.8, 0.5, 60)
-    colors = np.zeros((len(alt_v), 4))
-    colors[:, :3] = 1.0
-    colors[:, 3]  = np.clip((5.5 - mag_v) / 6.0, 0.2, 1.0)
-    ax.scatter(az_v, alt_v, s=sizes, c=colors, linewidths=0, zorder=2)
+    ax.scatter(az_v, alt_v, s=sizes, c="white", linewidths=0, zorder=2)
 
     # Moon
     moon_alt = moon_data.get("alt", -1)
     if moon_alt > 0:
         moon_az  = moon_data.get("az", 0)
         illum    = moon_data.get("illumination", 50)
-        is_waxing = ("Waxing" in moon_data.get("phase", "")
-                     or moon_data.get("phase") in ("New Moon", "First Quarter"))
-        ax.plot(moon_az, moon_alt, "o", markersize=16, color="#ddd",
-                markeredgecolor="#888", markeredgewidth=0.8, zorder=4)
+        ax.plot(moon_az, moon_alt, "o", markersize=16, color="white",
+                markeredgecolor="#888", markeredgewidth=0.5, zorder=4)
         if 2 < illum < 98:
+            # Simple wedge for phase in the PNG (JS SVG moon will overlap this)
             ax.plot(moon_az, moon_alt, "o", markersize=16, color="black",
-                    alpha=abs(1 - illum / 50) * 0.85, zorder=5)
+                    alpha=0.7, zorder=5) # Alpha kept slightly for shadow blending
         ax.text(moon_az, moon_alt + 3.5, "Moon", ha="center", va="bottom",
                 fontsize=8, color="#aaa", zorder=6)
 
