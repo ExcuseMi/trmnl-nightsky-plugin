@@ -380,13 +380,132 @@ def _compute_verdict(bortle: int, illumination: int, cloud_now: int) -> dict:
     return {"verdict": verdict, "score": score}
 
 
+# Constellation stick figures — pairs of Hipparcos IDs
+# fmt: off
+_CONST_LINES = [
+    # Orion
+    (27989,25336),(27989,26311),(25336,25930),(25930,26311),(26311,26727),
+    (26727,24436),(24436,27366),(27366,26727),(26727,26549),(26549,26207),
+    # Ursa Major (Big Dipper)
+    (54061,53910),(53910,58001),(58001,59774),(59774,62956),(62956,65378),
+    (65378,67301),(59774,54061),
+    # Cassiopeia
+    (746,3179),(3179,4427),(4427,6686),(6686,8886),
+    # Leo
+    (49669,47908),(47908,46390),(46390,47908),(49669,54879),(54879,57632),
+    (57632,55642),(55642,54879),(49669,50583),(50583,51624),
+    # Scorpius
+    (80763,82396),(82396,82514),(82514,82671),(82671,83000),(83000,83608),
+    (83608,84012),(84012,85927),(85927,86228),(86228,87073),(80763,78820),
+    (78820,78401),
+    # Cygnus (Northern Cross)
+    (102098,100453),(100453,97165),(97165,95947),(95947,94779),
+    (97165,98110),(97165,96441),
+    # Gemini
+    (36850,37826),(37826,36046),(36046,34693),(34693,32246),
+    (37279,35550),(35550,34693),(36850,37279),
+    # Perseus
+    (14576,13268),(13268,12390),(12390,14328),(14328,15863),(15863,17448),
+    (17448,18614),(14576,17448),(12390,11767),(11767,9884),
+    # Auriga
+    (28380,24608),(24608,23416),(23416,25428),(25428,28380),(28380,23453),
+    # Boötes
+    (72105,71795),(71795,69673),(69673,67927),(67927,71075),(71075,72105),
+    (72105,73555),(72105,74666),
+    # Virgo
+    (65474,63090),(63090,61941),(61941,60129),(60129,57757),(57757,61941),
+    (65474,66249),(66249,68520),(68520,69701),
+    # Taurus
+    (21421,20889),(20889,20205),(20205,17702),(17702,16537),(17702,18724),
+    (21421,25428),(21421,23015),
+    # Aquila
+    (97649,96468),(96468,93805),(97649,99473),(99473,98036),(97649,95501),
+    # Lyra
+    (91262,92420),(92420,92791),(92791,91971),(91971,92420),(91262,91971),
+    # Sagittarius (teapot)
+    (90185,89931),(89931,89642),(89642,88635),(88635,90185),(90185,92855),
+    (92855,93864),(93864,90496),(90496,89931),(88635,89341),(89341,87072),
+    # Hercules
+    (80816,81693),(81693,82080),(82080,84379),(84379,83207),(83207,81693),
+    (80816,79992),(79992,78159),(78159,77760),
+    # Pegasus
+    (113963,112158),(112158,109410),(109410,107315),(107315,113963),
+    (113963,677),(677,1067),
+    # Andromeda
+    (677,5447),(5447,9640),(9640,14135),(677,3092),(3092,4436),
+    # Canis Major
+    (32349,33165),(33165,33347),(33347,34444),(34444,35904),(35904,35037),
+    (35037,33165),(32349,30324),(30324,31592),
+    # Canis Minor
+    (37279,36188),
+    # Ursa Minor (Little Dipper)
+    (11767,85822),(85822,82080),(82080,79822),(79822,77055),(77055,75097),
+    (75097,72607),(72607,11767),
+    # Corona Borealis
+    (76267,75695),(75695,74785),(74785,74946),(74946,76127),(76127,76952),
+    (76952,76267),
+    # Pisces
+    (5742,7097),(7097,8198),(8198,9487),(9487,114971),(114971,113889),
+    (113889,112961),(112961,114971),
+    # Aries
+    (9884,8903),(8903,8832),(8832,8879),
+    # Aquarius
+    (109074,106278),(106278,104459),(104459,102618),(102618,106278),
+    (104459,103045),(103045,101769),(109074,110960),(110960,112961),
+    # Capricornus
+    (100064,102978),(102978,104139),(104139,105515),(105515,107556),
+    (107556,104139),(100064,98543),(98543,100064),
+    # Ophiuchus
+    (84970,83000),(83000,86032),(86032,84970),(84970,81377),(81377,79593),
+    (86032,87833),(87833,88048),
+    # Draco
+    (87585,85829),(85829,83895),(83895,80331),(80331,78527),(78527,75458),
+    (75458,68756),(68756,61281),(61281,56211),(56211,55203),(55203,61281),
+    (87585,94376),(94376,97433),(97433,87585),
+    # Centaurus (southern, partial for mid-latitudes)
+    (68702,71683),(71683,68702),
+    # Piscis Austrinus
+    (113368,111188),(111188,109285),(109285,107608),(107608,113368),
+    (113368,114131),
+]
+# fmt: on
+
+
+def _hip_altaz(hip_ids: set, hip_df, lat_f: float, lon_f: float, lst: float) -> dict:
+    """Return {hip_id: (alt_deg, az_deg)} for requested IDs that are in the catalog."""
+    result = {}
+    lat_rad = math.radians(lat_f)
+    for hid in hip_ids:
+        if hid not in hip_df.index:
+            continue
+        row = hip_df.loc[hid]
+        ra_deg  = row["ra_hours"] * 15.0
+        dec_rad = math.radians(row["dec_degrees"])
+        ha_rad  = math.radians(lst - ra_deg)
+        sin_alt = (math.sin(dec_rad) * math.sin(lat_rad)
+                   + math.cos(dec_rad) * math.cos(lat_rad) * math.cos(ha_rad))
+        alt_r   = math.asin(max(-1.0, min(1.0, sin_alt)))
+        cos_alt = math.cos(alt_r)
+        if cos_alt > 1e-10:
+            cos_az = ((math.sin(dec_rad) - math.sin(alt_r) * math.sin(lat_rad))
+                      / (cos_alt * math.cos(lat_rad)))
+            az_r = math.acos(max(-1.0, min(1.0, cos_az)))
+            if math.sin(ha_rad) > 0:
+                az_r = 2 * math.pi - az_r
+        else:
+            az_r = 0.0
+        result[hid] = (math.degrees(alt_r), math.degrees(az_r))
+    return result
+
+
 _PLANET_ABBR = {
     "Mercury": "Mer", "Venus": "Ven", "Mars": "Mar",
     "Jupiter": "Jup", "Saturn": "Sat", "Uranus": "Ura", "Neptune": "Nep",
 }
 
 
-def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list) -> str:
+def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list,
+                        w_px: int = 800, h_px: int = 480) -> str:
     ts, hip, _earth = _skyfield()
     lat_f, lon_f = float(lat), float(lon)
 
@@ -423,8 +542,8 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list) -> s
     alt_v, az_v = alt_deg[above], az_deg[above]
     mag_v       = hip["magnitude"].values[above]
 
-    # ── matplotlib rectangular panoramic chart (generated large for fullscreen) ─
-    W_PX, H_PX, DPI = 1304, 528, 100
+    # ── matplotlib rectangular panoramic chart ──────────────────────────────────
+    W_PX, H_PX, DPI = w_px, h_px, 100
     fig, ax = plt.subplots(figsize=(W_PX / DPI, H_PX / DPI), dpi=DPI)
     fig.patch.set_facecolor("black")
     ax.set_facecolor("black")
@@ -433,6 +552,18 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list) -> s
     ax.set_xlim(0, 360)
     ax.set_ylim(0, 90)
     ax.axis("off")
+
+    # Constellation lines
+    all_ids   = {hid for pair in _CONST_LINES for hid in pair}
+    positions = _hip_altaz(all_ids, hip, lat_f, lon_f, lst)
+    for h1, h2 in _CONST_LINES:
+        if h1 not in positions or h2 not in positions:
+            continue
+        alt1, az1 = positions[h1]
+        alt2, az2 = positions[h2]
+        if alt1 > 0 and alt2 > 0:
+            ax.plot([az1, az2], [alt1, alt2], color="#2a2a2a", linewidth=0.7,
+                    zorder=1, solid_capstyle="round")
 
     # Stars
     sizes  = np.clip((5.5 - mag_v) ** 2.2 * 0.8, 0.5, 60)
@@ -476,7 +607,8 @@ def _format_stars(n: int) -> str:
     return f"{n // 1000}k+" if n >= 1000 else str(n)
 
 
-async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str) -> dict:
+async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
+                         w_px: int = 800, h_px: int = 480) -> dict:
     bortle_str = bortle_str if bortle_str in BORTLE_MAP else "5"
     bortle_info = BORTLE_MAP[bortle_str]
     bortle_int = int(bortle_str)
@@ -515,7 +647,7 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str) -> di
     if best_from:
         viewing["best_from"] = best_from
 
-    chart = _generate_sky_chart(lat, lon, moon, planets)
+    chart = _generate_sky_chart(lat, lon, moon, planets, w_px, h_px)
 
     return {
         "sky": {
