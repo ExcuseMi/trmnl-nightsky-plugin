@@ -363,44 +363,37 @@ _CONST_NAMES_URL = "https://raw.githubusercontent.com/ofrohn/d3-celestial/master
 _CONST_DATA_DIR  = Path(__file__).parent.parent.parent / "data"
 
 _CONST_POLYLINES_CACHE: "dict | None" = None
+_CONST_LABELS_CACHE:    "dict | None" = None
 
 
-def _fetch_json_cached(url: str, cache_path: Path) -> dict:
-    if cache_path.exists():
-        with open(cache_path) as f:
-            return json.load(f)
-    logging.getLogger(__name__).info("Downloading %s", url)
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
-    with urllib.request.urlopen(url, timeout=15) as r:
-        data = json.loads(r.read())
-    with open(cache_path, "w") as f:
-        json.dump(data, f)
-    return data
-
-
-def _get_const_polylines() -> "dict[str, list[list[tuple[float, float]]]]":
-    global _CONST_POLYLINES_CACHE
+def _get_const_data() -> tuple[dict[str, list[list[tuple[float, float]]]], dict[str, tuple[float, float]]]:
+    global _CONST_POLYLINES_CACHE, _CONST_LABELS_CACHE
     if _CONST_POLYLINES_CACHE is not None:
-        return _CONST_POLYLINES_CACHE
+        return _CONST_POLYLINES_CACHE, _CONST_LABELS_CACHE
 
     lines_data = _fetch_json_cached(_CONST_LINES_URL, _CONST_DATA_DIR / "constellations.lines.json")
     names_data = _fetch_json_cached(_CONST_NAMES_URL, _CONST_DATA_DIR / "constellations.json")
 
-    name_map = {
-        f["id"]: f["properties"]["name"]
-        for f in names_data.get("features", [])
-        if "name" in f.get("properties", {})
-    }
+    name_map = {}
+    label_map = {}
+    for f in names_data.get("features", []):
+        abbr = f["id"]
+        name = f["properties"].get("name", abbr)
+        name_map[abbr] = name
+        if "geometry" in f and f["geometry"]["type"] == "Point":
+            coords = f["geometry"]["coordinates"]
+            # RA in data is degrees, normalise to [0, 360)
+            label_map[name] = (coords[0] % 360, coords[1])
 
-    result: dict[str, list[list[tuple[float, float]]]] = {}
+    poly_map: dict[str, list[list[tuple[float, float]]]] = {}
     for feature in lines_data.get("features", []):
         abbr = feature["id"]
         coords = feature["geometry"]["coordinates"]
-        # d3-celestial stores RA in (-180, 180]; normalise to [0, 360)
-        result[name_map.get(abbr, abbr)] = [[(ra % 360, dec) for ra, dec in line] for line in coords]
+        poly_map[name_map.get(abbr, abbr)] = [[(ra % 360, dec) for ra, dec in line] for line in coords]
 
-    _CONST_POLYLINES_CACHE = result
-    return result
+    _CONST_POLYLINES_CACHE = poly_map
+    _CONST_LABELS_CACHE = label_map
+    return poly_map, label_map
 
 
 def _radec_altaz(ra_deg: float, dec_deg: float, lat_rad: float, lst: float) -> tuple[float, float]:
@@ -529,9 +522,9 @@ def _constellation_svg_data(lat: str, lon: str, constellations: str,
 
     show_names = constellations == 'names'
     result = []
-    for name, polylines in _get_const_polylines().items():
+    poly_map, label_map = _get_const_data()
+    for name, polylines in poly_map.items():
         segs: list[list[float]] = []
-        label_pts: list[tuple[float, float]] = []
         for polyline in polylines:
             altaz = [_radec_altaz(ra, dec, lat_r, lst) for ra, dec in polyline]
             # If the polyline trails off into the near-zenith region (alt ≥ 88°),
@@ -566,16 +559,15 @@ def _constellation_svg_data(lat: str, lon: str, constellations: str,
                         alt_x = alt1 + t * (alt2 - alt1)
                         segs.append([round(az1, 1), round(alt1, 1), 0.0, round(alt_x, 1)])
                         segs.append([360.0, round(alt_x, 1), round(az2, 1), round(alt2, 1)])
-            label_pts.extend((az, alt) for alt, az in altaz if alt > 2)
         if not segs:
             continue
         entry: dict = {"n": name, "ls": segs}
-        if show_names and label_pts:
-            # Circular mean for azimuth to handle constellations straddling 0°/360°
-            sin_sum = sum(math.sin(math.radians(p[0])) for p in label_pts)
-            cos_sum = sum(math.cos(math.radians(p[0])) for p in label_pts)
-            entry["laz"]  = round(math.degrees(math.atan2(sin_sum, cos_sum)) % 360, 1)
-            entry["lalt"] = round(sum(p[1] for p in label_pts) / len(label_pts), 1)
+        if show_names and name in label_map:
+            lra, ldec = label_map[name]
+            lalt, laz = _radec_altaz(lra, ldec, lat_r, lst)
+            if lalt > 2:
+                entry["laz"]  = round(laz, 1)
+                entry["lalt"] = round(lalt, 1)
         result.append(entry)
     return result
 
