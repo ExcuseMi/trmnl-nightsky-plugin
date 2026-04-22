@@ -531,28 +531,34 @@ def _constellation_svg_data(lat: str, lon: str, constellations: str,
         label_pts: list[tuple[float, float]] = []
         for polyline in polylines:
             altaz = [_radec_altaz(ra, dec, lat_r, lst) for ra, dec in polyline]
+            # If the polyline trails off into the near-zenith region (alt ≥ 88°),
+            # the star just before the clipped region becomes a dangling dead-end.
+            # Remove both the clipped tail and that stepping-stone star.
+            orig_len = len(altaz)
+            while altaz and altaz[-1][0] >= 88:
+                altaz.pop()
+            if len(altaz) < orig_len and altaz:
+                altaz.pop()
             for i in range(len(altaz) - 1):
                 alt1, az1 = altaz[i]
                 alt2, az2 = altaz[i + 1]
-                # Skip below-horizon, near-zenith (az undefined ≥88°), or high-alt
-                # wide-az segments (cylindrical projection distortion near zenith).
                 if alt1 <= 0 or alt2 <= 0 or alt1 >= 88 or alt2 >= 88:
                     continue
-                if (alt1 + alt2) > 130 and abs(az1 - az2) > 30:
-                    continue
-                if abs(az1 - az2) <= 180:
+                az_diff = abs(az1 - az2)
+                if az_diff <= 180:
+                    # Non-wrap segment: skip if cylindrical projection distortion
+                    # near zenith would make it appear deceptively wide.
+                    if (alt1 + alt2) > 130 and az_diff > 30:
+                        continue
                     segs.append([round(az1, 1), round(alt1, 1), round(az2, 1), round(alt2, 1)])
                 else:
                     # Segment crosses the az=0/360 boundary — split it at the edge.
-                    # Determine which side crosses 360→0 vs 0→360.
                     if az1 > az2:
-                        # az1 near 360, az2 near 0
                         t = (360.0 - az1) / (360.0 - az1 + az2)
                         alt_x = alt1 + t * (alt2 - alt1)
                         segs.append([round(az1, 1), round(alt1, 1), 360.0, round(alt_x, 1)])
                         segs.append([0.0, round(alt_x, 1), round(az2, 1), round(alt2, 1)])
                     else:
-                        # az1 near 0, az2 near 360
                         t = az1 / (az1 + 360.0 - az2)
                         alt_x = alt1 + t * (alt2 - alt1)
                         segs.append([round(az1, 1), round(alt1, 1), 0.0, round(alt_x, 1)])
