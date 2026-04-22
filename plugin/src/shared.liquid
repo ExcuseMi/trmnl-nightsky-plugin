@@ -2,7 +2,8 @@
 {% assign moon_id  = "moon-"  | append_random %}
 {% assign mf_class = "mf-"    | append_random %}
 {% assign pl_id    = "pl-"    | append_random %}
-{% assign show_info = trmnl.plugin_settings.custom_fields_values.show_info_panel %}
+{% assign show_info         = trmnl.plugin_settings.custom_fields_values.show_info_panel %}
+{% assign show_planet_names = trmnl.plugin_settings.custom_fields_values.show_planet_names %}
 
 <style>
   .ns-overlay {
@@ -32,7 +33,7 @@
   <svg id="{{ pl_id }}" xmlns="http://www.w3.org/2000/svg"
        viewBox="0 0 {{ cw }} {{ ch }}"
        preserveAspectRatio="xMidYMid slice"
-       class="image--cover image-dither"
+       class="image--cover 1bit:image-dither"
        style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5">
     {% if data.sky.chart != "" %}
       <image href="{{ data.sky.chart }}" x="0" y="0" width="{{ cw }}" height="{{ ch }}" preserveAspectRatio="none"/>
@@ -41,7 +42,7 @@
     {% endif %}
   </svg>
 
-  {% if show_info == "yes" or show_info == "true" %}
+  {% if show_info == "true" %}
 
     {% if view == 1 %}
 
@@ -210,6 +211,15 @@
   var consts = {{ data.constellations | json }};
   if (!consts || !consts.length) return;
 
+  var placed = [];
+  svg._nsPlaced = placed; // shared with planet pass
+
+  function overlaps(r) {
+    return placed.some(function(e) {
+      return r.x < e.x+e.w+4 && r.x+r.w+4 > e.x && r.y < e.y+e.h+4 && r.y+r.h+4 > e.y;
+    });
+  }
+
   consts.forEach(function(c) {
     c.ls.forEach(function(s) {
       var line = document.createElementNS(ns, 'line');
@@ -221,18 +231,30 @@
       line.setAttribute('stroke-width', '0.8');
       svg.appendChild(line);
     });
-    if (c.laz !== undefined) {
-      var t = document.createElementNS(ns, 'text');
-      t.setAttribute('x', (c.laz / 360 * W).toFixed(1));
-      t.setAttribute('y', ((1 - c.lalt / 90) * H).toFixed(1));
-      t.setAttribute('text-anchor', 'middle');
-      t.setAttribute('dominant-baseline', 'middle');
-      t.setAttribute('font-size', '9');
-      t.setAttribute('fill', 'rgba(255,255,255,0.4)');
-      t.setAttribute('font-family', 'var(--label-font-family, "NicoClear", monospace)');
-      t.textContent = c.n;
-      svg.appendChild(t);
-    }
+    if (c.laz === undefined) return;
+    var tx = c.laz / 360 * W, ty = (1 - c.lalt / 90) * H;
+    var t = document.createElementNS(ns, 'text');
+    t.setAttribute('x', tx.toFixed(1));
+    t.setAttribute('y', ty.toFixed(1));
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('dominant-baseline', 'middle');
+    t.setAttribute('font-size', '9');
+    t.setAttribute('fill', 'rgba(255,255,255,0.75)');
+    t.setAttribute('font-family', 'var(--title-bar-font-family, var(--title-font-family, "NicoClear", monospace))');
+    t.textContent = c.n;
+    svg.appendChild(t);
+    var tw = t.getComputedTextLength(), pad = 4, lh = 12;
+    var r = {x: tx - tw/2 - pad/2, y: ty - lh/2, w: tw + pad, h: lh};
+    if (overlaps(r)) { svg.removeChild(t); return; }
+    placed.push(r);
+    var bg = document.createElementNS(ns, 'rect');
+    bg.setAttribute('x', r.x.toFixed(1));
+    bg.setAttribute('y', r.y.toFixed(1));
+    bg.setAttribute('width', r.w.toFixed(1));
+    bg.setAttribute('height', r.h.toFixed(1));
+    bg.setAttribute('fill', 'rgba(0,0,0,0.55)');
+    bg.setAttribute('rx', '2');
+    svg.insertBefore(bg, t);
   });
 })();
 
@@ -243,7 +265,8 @@
   var W = {{ cw }}, H = {{ ch }};
   var ns = 'http://www.w3.org/2000/svg';
   var planets = [{% for pl in data.planets %}{"n":"{{ pl.name }}","az":{{ pl.az }},"alt":{{ pl.alt }},"m":{{ pl.mag }}}{% unless forloop.last %},{% endunless %}{% endfor %}];
-  var placed = [];
+  var showPlanetNames = (function() { var v = '{{ show_planet_names }}'; return v === 'yes' || v === 'true'; })();
+  var placed = svg._nsPlaced || [];
   var ANCHORS = [{ax:0,ay:-1},{ax:1,ay:-1},{ax:1,ay:0},{ax:1,ay:1},{ax:0,ay:1},{ax:-1,ay:1},{ax:-1,ay:0},{ax:-1,ay:-1}];
   var AR = 18;
 
@@ -257,13 +280,15 @@
     var px = pl.az / 360 * W;
     var py = (1 - pl.alt / 90) * H;
     var mag = parseFloat(pl.m);
-    var pr  = Math.max(2, Math.min(7, 5 - mag * 0.6));
+    var pr  = Math.max(1.5, Math.min(4.5, 3.5 - mag * 0.5));
     var dot = document.createElementNS(ns, 'circle');
     dot.setAttribute('cx', px.toFixed(1)); dot.setAttribute('cy', py.toFixed(1));
     dot.setAttribute('r', pr.toFixed(1)); dot.setAttribute('fill', 'white');
     dot.setAttribute('stroke', 'rgba(255,255,255,0.4)'); dot.setAttribute('stroke-width', '1');
     svg.appendChild(dot);
     placed.push({x: px-pr-1, y: py-pr-1, w: (pr+1)*2, h: (pr+1)*2});
+
+    if (!showPlanetNames) return;
 
     var lw = pl.n.length * 6.5 + 8, lh = 14, anchor = null;
     for (var i = 0; i < ANCHORS.length; i++) {
@@ -286,10 +311,17 @@
     line.setAttribute('stroke-dasharray', '3 2');
     svg.appendChild(line);
 
+    var bg = document.createElementNS(ns, 'rect');
+    bg.setAttribute('x', anchor.x.toFixed(1)); bg.setAttribute('y', anchor.y.toFixed(1));
+    bg.setAttribute('width', lw.toFixed(1));   bg.setAttribute('height', lh.toFixed(1));
+    bg.setAttribute('fill', 'rgba(0,0,0,0.65)'); bg.setAttribute('rx', '2');
+    svg.appendChild(bg);
+
     var t = document.createElementNS(ns, 'text');
     t.setAttribute('x', (anchor.x+3).toFixed(1)); t.setAttribute('y', (anchor.y+11).toFixed(1));
     t.setAttribute('font-size', '11'); t.setAttribute('fill', 'white');
-    t.setAttribute('font-family', 'var(--label-font-family, "NicoClear", monospace)');
+    t.setAttribute('font-weight', 'bold');
+    t.setAttribute('font-family', 'var(--title-bar-font-family, var(--title-font-family, "NicoClear", monospace))');
     t.textContent = pl.n;
     svg.appendChild(t);
   });

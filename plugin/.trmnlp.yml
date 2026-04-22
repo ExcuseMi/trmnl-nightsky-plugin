@@ -23,14 +23,13 @@ variables:
       custom_fields_values:
         location: "London, UK"
         constellations: "names"
-        show_info_panel: "yes"
+        show_planet_names: "true"
+        show_info_panel: "true"
   data:
     sky:
       bortle: 4
       bortle_label: "Rural/suburban"
       nelm: 6.3
-      stars: 3200
-      stars_formatted: "3k+"
       chart: ""
       chart_w: 800
       chart_h: 480
@@ -42,62 +41,46 @@ variables:
       illumination: 26
       sets: "00:43"
       rises: "07:49"
-      alt: 32
-      az: 195
       days:
-        - { label: "Tonight",  date: "21 Apr", phase: "Waxing Crescent", illumination: 26, waxing: true }
-        - { label: "Tomorrow", date: "22 Apr", phase: "Waxing Crescent", illumination: 36, waxing: true }
-        - { label: "Thu",      date: "23 Apr", phase: "First Quarter",   illumination: 50, waxing: true }
-        - { label: "Fri",      date: "24 Apr", phase: "Waxing Gibbous",  illumination: 63, waxing: true }
+        - { label: "Tonight",  phase: "Waxing Crescent", illumination: 26, waxing: true }
+        - { label: "Tomorrow", phase: "Waxing Crescent", illumination: 36, waxing: true }
+        - { label: "Thu",      phase: "First Quarter",   illumination: 50, waxing: true }
+        - { label: "Fri",      phase: "Waxing Gibbous",  illumination: 63, waxing: true }
     forecast:
       now:
         cloud: 15
         cloud_low: 5
         cloud_mid: 8
         cloud_high: 10
-        next6h_avg: 22
         temp: 11
         dew_point: 7
         humidity: 74
         wind_speed: 12
         wind_dir: "W"
-      hourly:
-        - { hour: "21", cloud: 15, cloud_low: 5,  cloud_mid: 8,  cloud_high: 10, seeing: 2, transparency: 2 }
-        - { hour: "22", cloud: 22, cloud_low: 8,  cloud_mid: 10, cloud_high: 12, seeing: 2, transparency: 3 }
-        - { hour: "23", cloud: 40, cloud_low: 15, cloud_mid: 20, cloud_high: 18, seeing: 3, transparency: 3 }
-        - { hour: "00", cloud: 55, cloud_low: 20, cloud_mid: 28, cloud_high: 22, seeing: 4, transparency: 4 }
-        - { hour: "01", cloud: 35, cloud_low: 10, cloud_mid: 18, cloud_high: 15, seeing: 3, transparency: 3 }
-        - { hour: "02", cloud: 20, cloud_low: 5,  cloud_mid: 10, cloud_high: 12, seeing: 2, transparency: 2 }
-        - { hour: "03", cloud: 10, cloud_low: 2,  cloud_mid: 5,  cloud_high: 8,  seeing: 2, transparency: 2 }
-        - { hour: "04", cloud: 8,  cloud_low: 2,  cloud_mid: 3,  cloud_high: 5,  seeing: 1, transparency: 1 }
     planets:
       - name: "Jupiter"
         dir: "SW"
         az: 225
         alt: 42
         mag: -2.3
-        size: 40.1
         constellation: "Taurus"
       - name: "Saturn"
         dir: "E"
         az: 90
         alt: 28
         mag: 0.5
-        size: 17.2
         constellation: "Aquarius"
       - name: "Mars"
         dir: "S"
         az: 180
         alt: 35
         mag: -0.2
-        size: 8.5
         constellation: "Gemini"
       - name: "Uranus"
         dir: "SE"
         az: 135
         alt: 18
         mag: 5.8
-        size: 3.7
         constellation: "Aries"
     constellations:
       - n: "Orion"
@@ -121,6 +104,5 @@ variables:
         lalt: 41.0
     viewing:
       verdict: "Good"
-      score: 7
       best_from: "23:30"
       date: "22 Apr 2026"
