@@ -582,16 +582,8 @@ def _constellation_svg_data(lat: str, lon: str, constellations: str,
             pts = list(label_stars.values())
             sin_sum = sum(math.sin(math.radians(p[0])) for p in pts)
             cos_sum = sum(math.cos(math.radians(p[0])) for p in pts)
-            cx_az  = math.degrees(math.atan2(sin_sum, cos_sum)) % 360
-            cx_alt = sum(p[1] for p in pts) / len(pts)
-            # Snap to the star nearest the centroid so label sits on a visible dot.
-            def _ang_dist(p: tuple[float, float]) -> float:
-                daz = abs(p[0] - cx_az)
-                if daz > 180: daz = 360 - daz
-                return daz * daz + (p[1] - cx_alt) ** 2
-            best = min(pts, key=_ang_dist)
-            entry["laz"]  = round(best[0], 1)
-            entry["lalt"] = round(best[1], 1)
+            entry["laz"]  = round(math.degrees(math.atan2(sin_sum, cos_sum)) % 360, 1)
+            entry["lalt"] = round(sum(p[1] for p in pts) / len(pts), 1)
         result.append(entry)
     return result
 
