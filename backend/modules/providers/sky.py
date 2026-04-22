@@ -644,16 +644,14 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list,
                 bbox_inches=None, pad_inches=0)
     plt.close(fig)
     buf.seek(0)
-    return "data:image/png;base64," + base64.b64encode(buf.read()).decode()
+    return buf.read()
 
 
 def _format_stars(n: int) -> str:
     return f"{n // 1000}k+" if n >= 1000 else str(n)
 
 
-async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
-                         w_px: int = 800, h_px: int = 480,
-                         constellations: bool = True) -> dict:
+async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str) -> dict:
     bortle_str = bortle_str if bortle_str in BORTLE_MAP else "5"
     bortle_info = BORTLE_MAP[bortle_str]
     bortle_int = int(bortle_str)
@@ -692,8 +690,6 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
     if best_from:
         viewing["best_from"] = best_from
 
-    chart = _generate_sky_chart(lat, lon, moon, planets, w_px, h_px, constellations)
-
     return {
         "sky": {
             "bortle":          bortle_int,
@@ -701,7 +697,6 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
             "nelm":            bortle_info["nelm"],
             "stars":           bortle_info["stars"],
             "stars_formatted": _format_stars(bortle_info["stars"]),
-            "chart":           chart,
         },
         "sun":      sun,
         "moon":     moon,
