@@ -1,14 +1,6 @@
 # Night Sky Plugin — Guide
 
-Tonight's stargazing conditions on your TRMNL display: sky chart, light pollution, moon phase, visible planets, and an hourly weather forecast for astronomers.
-
----
-
-## Setup
-
-1. Install the plugin from the TRMNL marketplace.
-2. Set your **Location** in the plugin settings (city name or address).
-3. The display refreshes once per day by default — adjust **Refresh Interval** if needed.
+Tonight's stargazing conditions on your TRMNL display: a real-time star chart, light pollution rating, moon phase, visible planets, and a weather forecast for astronomers.
 
 ---
 
@@ -16,30 +8,37 @@ Tonight's stargazing conditions on your TRMNL display: sky chart, light pollutio
 
 | Setting | Description |
 |---------|-------------|
-| **Location** | City or address to generate the sky report for. Examples: `London, UK` · `Sydney, Australia` · `Central Park, New York` |
-| **Hide Info Panel** | When enabled, shows only the star chart with no overlay. Ideal for a clean sky view. |
+| **Location** | City or address for the sky report. Examples: `London, UK` · `Sydney, Australia` · `Central Park, New York` |
+| **Show Info Panel** | Show the conditions overlay (verdict, moon, weather, planets) on top of the chart. Disable for a clean chart-only view. |
+| **During Daytime** | What to show when the sun is up: the chart as-is, fast-forward to earliest nightfall, or skip the plugin entirely. |
+| **Constellations** | Draw constellation stick figures on the chart, optionally with names. |
+| **Show Planet Names** | Label visible planets on the chart. |
+| **Time Format** | 24-hour or 12-hour (AM/PM). |
+| **Show Title Bar** | Show the plugin name bar at the bottom of the screen. |
 
 ---
 
 ## Views
 
-| View | Layout | Content |
-|------|--------|---------|
-| **Full** | Fullscreen | Sky chart + full info overlay: verdict, moon, hourly cloud/seeing/transparency bars, conditions, 4-day moon forecast, planets |
-| **Half horizontal** | Wide half | Sky chart + compact overlay: verdict, moon phase, Bortle, conditions, planets |
-| **Half vertical** | Tall half | Sky chart + condensed overlay: verdict, moon, Bortle, cloud, temperature |
-| **Quadrant** | Quarter | Sky chart + minimal overlay: verdict, moon illumination, cloud cover |
+| View | Content |
+|------|---------|
+| **Full** | Star chart + full overlay: verdict, best-viewing time, Bortle/NELM, moon phase & rise/set, sun times, weather (temp, dew point, wind, humidity, cloud layers), 4-day moon forecast, visible planets |
+| **Half horizontal** | Star chart + compact overlay: verdict, moon phase, Bortle, sun/moon times, cloud %, temperature, planets |
+| **Half vertical** | Star chart + condensed overlay: verdict, moon phase, Bortle, cloud %, temperature |
+| **Quadrant** | Star chart + minimal overlay: verdict, moon illumination, cloud cover |
 
 ---
 
 ## Sky Chart
 
-The chart is a panoramic projection of the sky from horizon to zenith, left to right from North → East → South → West → North. Generated in real time for your location and the current time of day.
+The chart is a stereographic perspective projection centred on the southern sky at 40° altitude — the same view you get when you point a camera south and tilt it up slightly. The projection preserves constellation shapes (no horizontal stretching).
 
-- **Stars** are sized and brightened by magnitude — brighter stars appear larger and more opaque.
-- **Constellation lines** connect the main stars of each constellation.
+- **Stars** are sized by magnitude — brighter stars appear larger.
 - **Moon** is marked with a circle and labelled.
-- **Planets** are marked with a dot and their abbreviated name.
+- **Planets** are marked with a dot (and name if enabled).
+- **Constellation lines** connect the main stars of each figure (if enabled).
+
+Objects north of the zenith or far east/west may be outside the frame; the chart covers roughly 100° of sky height centred at 40° altitude.
 
 ---
 
@@ -47,60 +46,35 @@ The chart is a panoramic projection of the sky from horizon to zenith, left to r
 
 ### Verdict
 
-A single-word summary of tonight's stargazing quality: **Excellent**, **Good**, **Fair**, or **Poor**. Based on cloud cover, Bortle scale, and atmospheric conditions.
+**Excellent**, **Good**, **Fair**, or **Poor** — a summary of tonight's stargazing quality based on cloud cover, moon illumination, and Bortle scale.
+
+### Best Viewing Window
+
+Shown as ★ HH:MM in the full overlay. The hour after astronomical dusk when the moon is lowest (or has set) and cloud cover is expected to be lightest.
 
 ### Bortle Scale
 
-A 1–9 measure of light pollution at your location:
+A 1–9 measure of light pollution at your location, derived from VIIRS 2024 satellite data:
 
 | Bortle | Label | NELM |
 |--------|-------|------|
-| 1 | Pristine dark sky | 7.6–8.0 |
-| 2 | Truly dark sky | 7.1–7.5 |
-| 3 | Rural sky | 6.6–7.0 |
-| 4 | Rural/suburban | 6.1–6.5 |
-| 5 | Suburban sky | 5.6–6.0 |
-| 6 | Bright suburban | 5.1–5.5 |
-| 7 | Suburban/urban | 4.6–5.0 |
-| 8 | City sky | 4.1–4.5 |
-| 9 | Inner city | < 4.0 |
+| 1 | Exceptional dark sky | 7.8 |
+| 2 | Truly dark sky | 7.3 |
+| 3 | Rural sky | 6.8 |
+| 4 | Rural/suburban | 6.3 |
+| 5 | Suburban sky | 5.8 |
+| 6 | Bright suburban | 5.3 |
+| 7 | Suburban/urban | 4.8 |
+| 8 | City sky | 4.3 |
+| 9 | Inner city | 3.5 |
 
 ### NELM — Naked Eye Limiting Magnitude
 
-The faintest star you can see with the naked eye under current conditions. Higher is better: NELM 6.5 means you can see stars of magnitude 6.5 or fainter. The full moon or strong light pollution can drop this to 4.0 or below.
-
-### Seeing (Antoniadi Scale 1–8)
-
-Atmospheric stability — how steady the air is. Poor seeing causes stars to twinkle and planets to blur. Matters most for telescopic observation of planets and double stars.
-
-| Score | Description |
-|-------|-------------|
-| 1–2 | Very poor — strong turbulence |
-| 3–4 | Poor to average |
-| 5–6 | Good — some undulations |
-| 7–8 | Excellent — near perfect |
-
-### Transparency (1–8)
-
-Atmospheric clarity — how well light passes through the air. Affected by humidity, aerosols, and high cloud. Low transparency washes out faint nebulae and galaxies even in a dark sky.
-
-### Hourly Bars
-
-The three bar charts in the full view cover the upcoming night hours:
-
-- **☁ Cloud** — total cloud cover percentage. Taller = more cloud.
-- **Seeing** — Antoniadi score. Taller = better seeing.
-- **Transp** — Transparency score. Taller = better transparency.
-
-Bar shading: dark = best, grey = moderate, light = poor.
+The faintest star visible with the naked eye under your sky conditions. Higher is better. A full moon or heavy light pollution can drop this below 4.0.
 
 ### Planets
 
-Each visible planet (above the horizon) is listed with:
-- **Direction** (N / NE / E / SE / S / SW / W / NW)
-- **Altitude** in degrees above the horizon
-- **Magnitude** — brightness (lower/negative = brighter)
-- **Constellation** it currently occupies
+Each visible planet (altitude > 5°) is listed with direction, altitude in degrees, magnitude, and the constellation it currently occupies.
 
 ---
 
@@ -108,15 +82,17 @@ Each visible planet (above the horizon) is listed with:
 
 | Source | Used for |
 |--------|----------|
-| [USNO Astronomical API](https://aa.usno.navy.mil/data/api) | Sun/moon rise-set times, moon phase, planet positions |
-| [Open-Meteo](https://open-meteo.com) | Cloud cover, seeing, transparency, temperature, wind, humidity |
-| [lightpollutionmap.info](https://www.lightpollutionmap.info) | Bortle scale and NELM (VIIRS 2024 data) |
-| [Hipparcos Catalog](https://www.cosmos.esa.int/web/hipparcos) | 118,000 stars for the sky chart |
+| [Hipparcos Catalog](https://www.cosmos.esa.int/web/hipparcos) + [Skyfield](https://rhodesmill.org/skyfield/) | 118,000 stars for the sky chart |
+| [PyEphem](https://rhodesmill.org/pyephem/) | Planet and moon positions, sun/moon rise–set times |
+| [Stellarium modern_st](https://github.com/Stellarium/stellarium) | Constellation stick figure lines |
+| [Open-Meteo](https://open-meteo.com) | Cloud cover, temperature, dew point, wind, humidity |
+| [lightpollutionmap.info](https://www.lightpollutionmap.info) | Bortle scale and NELM (VIIRS 2024 satellite data) |
 
 ---
 
 ## Tips
 
-- **Best viewing window** is shown as ★ HH:MM in the full view overlay — this is the hour with the lowest combined cloud + seeing score.
-- Bortle 1–4 sites are worth travelling to for serious deep-sky work. Bortle 7+ means only the Moon, planets, and the brightest clusters are rewarding.
-- High transparency + good seeing + new moon + Bortle ≤ 4 = a great night.
+- **Bortle 1–4** sites are worth travelling to for serious deep-sky work. Bortle 7+ means only the Moon, planets, and the brightest clusters are rewarding.
+- **New moon + clear sky + Bortle ≤ 4** = an exceptional night.
+- Set **During Daytime → Skip** if you only want the display active at night.
+- The chart updates every 5 minutes internally; the TRMNL display refreshes every 15 minutes.

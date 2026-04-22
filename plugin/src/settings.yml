@@ -5,7 +5,7 @@ dark_mode: 'no'
 static_data: ''
 polling_verb: get
 framework_version: 2.3.7
-serverless_language: 
+serverless_language:
 polling_url: 'https://trmnl.bettens.dev/nightsky/data?location={{ location | url_encode }}&tz={{ trmnl.user.time_zone_iana }}&w={{ trmnl.device.width | default: 800 }}&h={{ trmnl.device.height | default: 480 }}&constellations={{ constellations }}&daytime_mode={{ daytime_mode }}'
 polling_headers: ''
 polling_body: ''
@@ -14,7 +14,7 @@ custom_fields:
 - keyname: author_info
   name: About This Plugin
   field_type: author_bio
-  description: "A real-time star chart for your location with an optional conditions overlay. The chart renders the sky as it looks right now — stars sized by magnitude, moon position, and visible planets. The overlay shows Bortle scale, naked-eye limiting magnitude, moon phase &amp; illumination, cloud cover forecast, temperature, and a best-viewing window estimate.<br /><br /><a href=\"https://github.com/ExcuseMi/trmnl-nightsky-plugin/blob/main/GUIDE.md\">\U0001F4D6 Plugin Guide</a><br /><br /><strong>Data sources:</strong> <a href=\"https://aa.usno.navy.mil/data/api\">USNO Astronomical API</a> · <a href=\"https://open-meteo.com\">Open-Meteo</a> · <a href=\"https://www.lightpollutionmap.info\">lightpollutionmap.info</a> (VIIRS 2024)"
+  description: "A real-time star chart for your location with an optional conditions overlay. The chart renders a perspective view of the sky looking south — stars sized by magnitude, moon and visible planets marked, and optional constellation stick figures. The overlay shows Bortle scale, NELM, moon phase &amp; illumination, cloud cover, temperature, dew point, and a best-viewing window estimate.<br /><br /><a href=\"https://github.com/ExcuseMi/trmnl-nightsky-plugin/blob/main/GUIDE.md\">\U0001F4D6 Plugin Guide</a><br /><br /><strong>Data sources:</strong> <a href=\"https://www.cosmos.esa.int/web/hipparcos\">Hipparcos Catalog</a> &amp; <a href=\"https://rhodesmill.org/skyfield/\">Skyfield</a> · <a href=\"https://open-meteo.com\">Open-Meteo</a> · <a href=\"https://www.lightpollutionmap.info\">lightpollutionmap.info</a> (VIIRS 2024) · <a href=\"https://github.com/Stellarium/stellarium\">Stellarium</a>"
   github_url: https://github.com/ExcuseMi/trmnl-nightsky-plugin
   category: nature
 - keyname: location
@@ -22,44 +22,44 @@ custom_fields:
   name: Location
   description: City or address to centre the sky report on.<br /><strong>Examples:</strong> London, UK · Central Park, New York · Sydney, Australia
   placeholder: London, UK
+- keyname: show_info_panel
+  field_type: boolean
+  name: Show Info Panel
+  description: "Show the conditions overlay on top of the star chart.<br /><strong>Includes:</strong> viewing verdict · moon phase &amp; rise/set · Bortle/NELM · cloud cover · temperature &amp; dew point · visible planets. Disable for a clean chart-only view."
+- keyname: daytime_mode
+  field_type: select
+  name: During Daytime
+  description: "How the plugin behaves when the sun is above the horizon.<br /><strong>Earliest night</strong> fast-forwards the chart to astronomical dusk."
+  options:
+  - Show chart as if the sun wasn't there: ignore
+  - Show chart from the earliest night time: earliest_night
+  - Skip plugin display during the daytime: skip
+  default: ignore
 - keyname: constellations
   field_type: select
   name: Constellations
-  description: Draw constellation stick figures on the star chart.
+  description: "Draw constellation stick figures on the star chart.<br />Lines sourced from <a href=\"https://github.com/Stellarium/stellarium\">Stellarium</a> (Sky &amp; Telescope modern culture)."
   options:
   - Show with names: names
   - Show lines only: lines
   - Hide: hide
   optional: true
   default: hide
-- keyname: show_title_bar
+- keyname: show_planet_names
   field_type: boolean
-  name: Show Title Bar
-  description: Display the plugin name bar at the bottom of the screen.
-- keyname: daytime_mode
-  field_type: select
-  name: During Daytime
-  description: How the plugin should behave when the sun is up.
-  options:
-  - Show chart as if the sun wasn't there: ignore
-  - Show chart from the earliest night time: earliest_night
-  - Skip plugin display during the daytime: skip
-  default: ignore
+  name: Show Planet Names
+  description: "Label each visible planet on the star chart.<br />Only planets <strong>above 5° altitude</strong> are shown."
 - keyname: time_format
   field_type: select
   name: Time Format
-  description: Display time in 24-hour or 12-hour (AM/PM) format.
+  description: Display rise/set times in 24-hour or 12-hour (AM/PM) format.
   options:
   - 24-hour: 24h
   - 12-hour (AM/PM): 12h
   default: 24h
-- keyname: show_planet_names
+- keyname: show_title_bar
   field_type: boolean
-  name: Show Planet Names
-  description: Label visible planets on the star chart.
-- keyname: show_info_panel
-  field_type: boolean
-  name: Show Info Panel
-  description: Show the conditions overlay on top of the star chart.
+  name: Show Title Bar
+  description: Display the plugin name bar at the bottom of the screen.
 name: Night Sky
 refresh_interval: 15
