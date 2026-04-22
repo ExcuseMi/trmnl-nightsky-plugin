@@ -537,7 +537,8 @@ _PLANET_ABBR = {
 
 
 def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list,
-                        w_px: int = 800, h_px: int = 480) -> str:
+                        w_px: int = 800, h_px: int = 480,
+                        constellations: bool = True) -> str:
     ts, hip, _earth = _skyfield()
     lat_f, lon_f = float(lat), float(lon)
 
@@ -586,28 +587,27 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list,
     ax.axis("off")
 
     # Constellation lines + names
-    all_ids   = {hid for pair in _CONST_LINES for hid in pair}
-    positions = _hip_altaz(all_ids, hip, lat_f, lon_f, lst)
-    for h1, h2 in _CONST_LINES:
-        if h1 not in positions or h2 not in positions:
-            continue
-        alt1, az1 = positions[h1]
-        alt2, az2 = positions[h2]
-        if alt1 > 0 and alt2 > 0:
-            ax.plot([az1, az2], [alt1, alt2], color="#2a2a2a", linewidth=0.7,
-                    zorder=1, solid_capstyle="round")
-
-    for name, pairs in _CONSTELLATIONS.items():
-        ids = {hid for pair in pairs for hid in pair}
-        pts = [(positions[hid][1], positions[hid][0])
-               for hid in ids if hid in positions and positions[hid][0] > 2]
-        if not pts:
-            continue
-        cx = sum(p[0] for p in pts) / len(pts)
-        cy = sum(p[1] for p in pts) / len(pts)
-        ax.text(cx, cy, name, ha="center", va="center",
-                fontsize=6, color="#555", zorder=3,
-                fontstyle="italic")
+    if constellations:
+        all_ids   = {hid for pair in _CONST_LINES for hid in pair}
+        positions = _hip_altaz(all_ids, hip, lat_f, lon_f, lst)
+        for h1, h2 in _CONST_LINES:
+            if h1 not in positions or h2 not in positions:
+                continue
+            alt1, az1 = positions[h1]
+            alt2, az2 = positions[h2]
+            if alt1 > 0 and alt2 > 0:
+                ax.plot([az1, az2], [alt1, alt2], color="#2a2a2a", linewidth=0.7,
+                        zorder=1, solid_capstyle="round")
+        for name, pairs in _CONSTELLATIONS.items():
+            ids = {hid for pair in pairs for hid in pair}
+            pts = [(positions[hid][1], positions[hid][0])
+                   for hid in ids if hid in positions and positions[hid][0] > 2]
+            if not pts:
+                continue
+            cx = sum(p[0] for p in pts) / len(pts)
+            cy = sum(p[1] for p in pts) / len(pts)
+            ax.text(cx, cy, name, ha="center", va="center",
+                    fontsize=6, color="#555", zorder=3, fontstyle="italic")
 
     # Stars
     sizes  = np.clip((5.5 - mag_v) ** 2.2 * 0.8, 0.5, 60)
@@ -652,7 +652,8 @@ def _format_stars(n: int) -> str:
 
 
 async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
-                         w_px: int = 800, h_px: int = 480) -> dict:
+                         w_px: int = 800, h_px: int = 480,
+                         constellations: bool = True) -> dict:
     bortle_str = bortle_str if bortle_str in BORTLE_MAP else "5"
     bortle_info = BORTLE_MAP[bortle_str]
     bortle_int = int(bortle_str)
@@ -691,7 +692,7 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
     if best_from:
         viewing["best_from"] = best_from
 
-    chart = _generate_sky_chart(lat, lon, moon, planets, w_px, h_px)
+    chart = _generate_sky_chart(lat, lon, moon, planets, w_px, h_px, constellations)
 
     return {
         "sky": {

@@ -22,6 +22,7 @@ variables:
       no_screen_padding: "no"
       custom_fields_values:
         location: "London, UK"
+        constellations: "yes"
         hide_info_panel: "no"
   data:
     sky:

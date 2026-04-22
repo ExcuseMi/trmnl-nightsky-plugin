@@ -5,8 +5,8 @@ dark_mode: 'no'
 static_data: ''
 polling_verb: get
 framework_version: 2.3.7
-serverless_language: 
-polling_url: https://trmnl.bettens.dev/nightsky/data?location={{ location | url_encode }}&tz=###{{ trmnl.user.time_zone_iana }}&w=###{{ trmnl.device.width }}&h=###{{ trmnl.device.height }}
+serverless_language: ''
+polling_url: https://trmnl.bettens.dev/nightsky/data?location={{ location | url_encode }}&tz={{ trmnl.user.time_zone_iana }}&w={{ trmnl.device.width }}&h={{ trmnl.device.height }}&constellations={{ constellations }}
 polling_headers: ''
 polling_body: ''
 id: 290823
@@ -14,7 +14,7 @@ custom_fields:
 - keyname: author_info
   name: About This Plugin
   field_type: author_bio
-  description: Tonight's sky conditions for your location — Bortle scale, stars visible, moon phase, visible planets, and cloud cover.<br /><br /><a href="https://github.com/ExcuseMi/trmnl-nightsky-plugin/blob/main/GUIDE.md">📖 Plugin Guide</a><br /><br /><strong>Data sources:</strong> <a href="https://aa.usno.navy.mil/data/api">USNO Astronomical API</a> · <a href="https://open-meteo.com">Open-Meteo</a> · <a href="https://www.lightpollutionmap.info">lightpollutionmap.info</a> (VIIRS 2024)
+  description: "Tonight's sky conditions for your location — Bortle scale, stars visible, moon phase, visible planets, and cloud cover.<br /><br /><a href=\"https://github.com/ExcuseMi/trmnl-nightsky-plugin/blob/main/GUIDE.md\">\U0001F4D6 Plugin Guide</a><br /><br /><strong>Data sources:</strong> <a href=\"https://aa.usno.navy.mil/data/api\">USNO Astronomical API</a> · <a href=\"https://open-meteo.com\">Open-Meteo</a> · <a href=\"https://www.lightpollutionmap.info\">lightpollutionmap.info</a> (VIIRS 2024)"
   github_url: https://github.com/ExcuseMi/trmnl-nightsky-plugin
   category: nature
 - keyname: location
@@ -22,6 +22,10 @@ custom_fields:
   name: Location
   description: City or address to centre the sky report on.<br /><strong>Examples:</strong> London, UK · Central Park, New York · Sydney, Australia
   placeholder: London, UK
+- keyname: constellations
+  field_type: boolean
+  name: Show Constellations
+  description: Draw constellation stick figures and names on the star chart.
 - keyname: hide_info_panel
   field_type: boolean
   name: Hide Info Panel
