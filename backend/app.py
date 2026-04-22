@@ -108,7 +108,7 @@ async def chart():
             except Exception:
                 log.warning('Redis set failed', exc_info=True)
 
-    return Response(png, mimetype='image/png', headers={
+    return Response(png, mimetype='image/svg+xml', headers={
         'Cache-Control': 'no-cache',
     })
 

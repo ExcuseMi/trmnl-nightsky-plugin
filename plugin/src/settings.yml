@@ -6,7 +6,7 @@ static_data: ''
 polling_verb: get
 framework_version: 2.3.7
 serverless_language: 
-polling_url: 'https://trmnl.bettens.dev/nightsky/data?location={{ location | url_encode }}&tz={{ trmnl.user.time_zone_iana }}&w={{ trmnl.device.width | default: 800 }}&h={{ trmnl.device.height | default: 480 }}&constellations={{ constellations }}&daytime_mode={{ daytime_mode }}&realistic_stars={{ realistic_stars }}'
+polling_url: 'https://trmnl.bettens.dev/nightsky/data?location={{ location | url_encode }}&tz={{ trmnl.user.time_zone_iana }}&w={{ trmnl.device.width | default: 800 }}&h={{ trmnl.device.height | default: 480 }}&constellations={{ constellations }}&daytime_mode={{ daytime_mode }}&realistic_stars={{ realistic_stars }}&planet_names,={{ planet_names, }}'
 polling_headers: ''
 polling_body: ''
 id: 290823
