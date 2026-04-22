@@ -26,9 +26,9 @@ custom_fields:
   field_type: boolean
   name: Show Constellations
   description: Draw constellation stick figures and names on the star chart.
-- keyname: hide_info_panel
+- keyname: show_info_panel
   field_type: boolean
-  name: Hide Info Panel
-  description: Show only the star chart, without the conditions overlay.
+  name: Show Info Panel
+  description: Show the conditions overlay on top of the star chart.
 name: Night Sky
 refresh_interval: 1440

@@ -6,10 +6,10 @@ watch:
   - src
 
 custom_fields:
-  hide_info_panel:
-    label: "Hide info panel"
+  show_info_panel:
+    label: "Show info panel"
     type: boolean
-    default: false
+    default: true
 
 variables:
   trmnl:
@@ -23,7 +23,7 @@ variables:
       custom_fields_values:
         location: "London, UK"
         constellations: "yes"
-        hide_info_panel: "no"
+        show_info_panel: "yes"
   data:
     sky:
       bortle: 4

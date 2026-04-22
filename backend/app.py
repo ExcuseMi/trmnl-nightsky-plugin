@@ -37,7 +37,7 @@ async def chart():
     tz             = request.args.get('tz', 'UTC')
     w              = int(request.args.get('w', '800').lstrip('#') or 800)
     h              = int(request.args.get('h', '480').lstrip('#') or 480)
-    constellations = request.args.get('constellations', 'yes').lstrip('#') != 'no'
+    constellations = request.args.get('constellations', 'yes').lstrip('#').lower() not in ('no', 'false')
 
     now     = datetime.now(timezone.utc)
     utc_hr  = now.replace(minute=0, second=0, microsecond=0)
