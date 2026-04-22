@@ -6,7 +6,7 @@ static_data: ''
 polling_verb: get
 framework_version: 2.3.7
 serverless_language: 
-polling_url: 'https://trmnl.bettens.dev/nightsky/data?location={{ location | url_encode }}&tz={{ trmnl.user.time_zone_iana }}&w={{ trmnl.device.width | default: 800 }}&h={{ trmnl.device.height | default: 480 }}&constellations={{ constellations }}&daytime_mode={{ daytime_mode }}'
+polling_url: 'https://trmnl.bettens.dev/nightsky/data?location={{ location | url_encode }}&tz={{ trmnl.user.time_zone_iana }}&w={{ trmnl.device.width | default: 800 }}&h={{ trmnl.device.height | default: 480 }}&constellations={{ constellations }}&daytime_mode={{ daytime_mode }}&realistic_stars={{ realistic_stars }}'
 polling_headers: ''
 polling_body: ''
 id: 290823
@@ -49,6 +49,10 @@ custom_fields:
   field_type: boolean
   name: Show Planet Names
   description: Label each visible planet on the star chart.<br />Only planets <strong>above 5° altitude</strong> are shown.
+- keyname: realistic_stars
+  field_type: boolean
+  name: Realistic Star Count
+  description: "Limit stars to those actually visible under your local light pollution (Bortle/NELM).<br />When off, all catalog stars are shown regardless of sky brightness."
 - keyname: time_format
   field_type: select
   name: Time Format

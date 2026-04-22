@@ -164,11 +164,13 @@ async def data():
         cw_val = int(w)
         ch_val = int(h)
 
+        realistic_stars = request.args.get('realistic_stars', 'false').lower() == 'true'
         chart_params = {
             'lat': lat, 'lon': lon, 'tz': tz, 'w': cw_val, 'h': ch_val,
             't': int(snap.timestamp()),
-            'nelm': BORTLE_MAP.get(bortle_str, BORTLE_MAP['5'])['nelm'],
         }
+        if realistic_stars:
+            chart_params['nelm'] = BORTLE_MAP.get(bortle_str, BORTLE_MAP['5'])['nelm']
         if daytime_mode == 'ignore':
             chart_params['hide_sun'] = 'true'
 

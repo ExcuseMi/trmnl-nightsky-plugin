@@ -13,6 +13,7 @@ Tonight's stargazing conditions on your TRMNL display: a real-time star chart, l
 | **During Daytime** | What to show when the sun is up: the chart as-is, fast-forward to earliest nightfall, or skip the plugin entirely. |
 | **Constellations** | Draw constellation stick figures on the chart, optionally with names. |
 | **Show Planet Names** | Label visible planets on the chart. |
+| **Realistic Star Count** | When enabled, limits the chart to stars actually visible under your local light pollution (Bortle/NELM). Off by default — useful for comparing what a dark-sky site would look like. |
 | **Time Format** | 24-hour or 12-hour (AM/PM). |
 | **Show Title Bar** | Show the plugin name bar at the bottom of the screen. |
 
