@@ -542,7 +542,7 @@ def _constellation_svg_data(lat: str, lon: str, constellations: str,
     result = []
     for name, chains in _get_const_hip_chains().items():
         segs: list[list[float]] = []
-        label_pts: list[tuple[float, float]] = []
+        label_stars: dict[int, tuple[float, float]] = {}  # hip_id → (az, alt), unique
         for chain in chains:
             for i in range(len(chain) - 1):
                 h1, h2 = chain[i], chain[i + 1]
@@ -571,18 +571,27 @@ def _constellation_svg_data(lat: str, lon: str, constellations: str,
                         alt_x = alt1 + t * (alt2 - alt1)
                         segs.append([round(az1, 1), round(alt1, 1), 0.0, round(alt_x, 1)])
                         segs.append([360.0, round(alt_x, 1), round(az2, 1), round(alt2, 1)])
-                label_pts.append((az1, alt1))
-                label_pts.append((az2, alt2))
+                label_stars[h1] = (az1, alt1)
+                label_stars[h2] = (az2, alt2)
         # Stellarium chains revisit nodes when branching; deduplicate drawn segments.
         segs = list({tuple(s): s for s in segs}.values())
         if not segs:
             continue
         entry: dict = {"n": name, "ls": segs}
-        if show_names and label_pts:
-            sin_sum = sum(math.sin(math.radians(p[0])) for p in label_pts)
-            cos_sum = sum(math.cos(math.radians(p[0])) for p in label_pts)
-            entry["laz"]  = round(math.degrees(math.atan2(sin_sum, cos_sum)) % 360, 1)
-            entry["lalt"] = round(sum(p[1] for p in label_pts) / len(label_pts), 1)
+        if show_names and label_stars:
+            pts = list(label_stars.values())
+            sin_sum = sum(math.sin(math.radians(p[0])) for p in pts)
+            cos_sum = sum(math.cos(math.radians(p[0])) for p in pts)
+            cx_az  = math.degrees(math.atan2(sin_sum, cos_sum)) % 360
+            cx_alt = sum(p[1] for p in pts) / len(pts)
+            # Snap to the star nearest the centroid so label sits on a visible dot.
+            def _ang_dist(p: tuple[float, float]) -> float:
+                daz = abs(p[0] - cx_az)
+                if daz > 180: daz = 360 - daz
+                return daz * daz + (p[1] - cx_alt) ** 2
+            best = min(pts, key=_ang_dist)
+            entry["laz"]  = round(best[0], 1)
+            entry["lalt"] = round(best[1], 1)
         result.append(entry)
     return result
 
