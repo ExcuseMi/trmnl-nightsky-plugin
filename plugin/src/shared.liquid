@@ -35,11 +35,9 @@
     <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:black"></div>
   {% endif %}
 
-  {% comment %} ── Planet SVG overlay (dots + leader lines, rendered client-side) ── {% endcomment %}
-  {% if data.planets.size > 0 %}
-    <svg id="{{ pl_id }}" xmlns="http://www.w3.org/2000/svg"
-         style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5"></svg>
-  {% endif %}
+  {% comment %} ── Constellation + planet SVG overlay, rendered client-side ── {% endcomment %}
+  <svg id="{{ pl_id }}" xmlns="http://www.w3.org/2000/svg"
+       style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5"></svg>
 
   {% if show_info == "yes" or show_info == "true" %}
 
@@ -199,6 +197,43 @@
     var i = parseInt(img.getAttribute('data-illum') || '0');
     var w = img.getAttribute('data-waxing') === 'true';
     img.src = moonSrc(i, w, 24, 26);
+  });
+})();
+
+// Constellation lines + labels
+(function() {
+  var svg = document.getElementById('{{ pl_id }}');
+  if (!svg) return;
+  var rect = svg.getBoundingClientRect();
+  var W = rect.width, H = rect.height;
+  if (!W || !H) return;
+  var ns = 'http://www.w3.org/2000/svg';
+  var consts = {{ data.constellations | json }};
+  if (!consts || !consts.length) return;
+
+  consts.forEach(function(c) {
+    c.ls.forEach(function(s) {
+      var line = document.createElementNS(ns, 'line');
+      line.setAttribute('x1', (s[0] / 360 * W).toFixed(1));
+      line.setAttribute('y1', ((1 - s[1] / 90) * H).toFixed(1));
+      line.setAttribute('x2', (s[2] / 360 * W).toFixed(1));
+      line.setAttribute('y2', ((1 - s[3] / 90) * H).toFixed(1));
+      line.setAttribute('stroke', 'rgba(255,255,255,0.22)');
+      line.setAttribute('stroke-width', '0.8');
+      svg.appendChild(line);
+    });
+    if (c.laz !== undefined) {
+      var t = document.createElementNS(ns, 'text');
+      t.setAttribute('x', (c.laz / 360 * W).toFixed(1));
+      t.setAttribute('y', ((1 - c.lalt / 90) * H).toFixed(1));
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('dominant-baseline', 'middle');
+      t.setAttribute('font-size', '9');
+      t.setAttribute('fill', 'rgba(255,255,255,0.4)');
+      t.setAttribute('font-family', 'var(--title-bar-font-family, var(--title-font-family, "NicoClean", monospace))');
+      t.textContent = c.n;
+      svg.appendChild(t);
+    }
   });
 })();
 

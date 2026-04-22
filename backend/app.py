@@ -64,7 +64,7 @@ async def chart():
 
     now       = datetime.now(timezone.utc)
     utc_hr    = now.replace(minute=0, second=0, microsecond=0)
-    cache_key = f"{lat}|{lon}|{tz}|{w}|{h}|{constellations}|{utc_hr.isoformat()}"
+    cache_key = f"{lat}|{lon}|{tz}|{w}|{h}|{utc_hr.isoformat()}"
 
     if cache_key in _chart_cache:
         png = _chart_cache[cache_key]
@@ -72,7 +72,7 @@ async def chart():
     else:
         try:
             moon, _ = _compute_moon(lat, lon, tz)
-            png     = _generate_sky_chart(lat, lon, moon, w, h, constellations)
+            png     = _generate_sky_chart(lat, lon, moon, w, h)
             stale = [k for k in _chart_cache if not k.endswith(utc_hr.isoformat())]
             for k in stale:
                 del _chart_cache[k]
@@ -111,14 +111,13 @@ async def data():
         bortle     = lookup_bortle(float(lat), float(lon))
         bortle_str = str(bortle) if bortle else '5'
 
-        payload = await build_sky_data(lat, lon, bortle_str, tz)
+        payload = await build_sky_data(lat, lon, bortle_str, tz, constellations)
 
         # Build chart URL — prefer BASE_URL env var (proxy strips path prefix)
         base_url  = os.getenv('BASE_URL', '').rstrip('/') or \
                     str(request.url).split('?')[0].rsplit('/', 1)[0]
         chart_url = base_url + '/chart?' + urlencode({
-            'lat': lat, 'lon': lon, 'tz': tz,
-            'w': w, 'h': h, 'constellations': constellations,
+            'lat': lat, 'lon': lon, 'tz': tz, 'w': w, 'h': h,
         })
         payload['sky']['chart'] = chart_url
 

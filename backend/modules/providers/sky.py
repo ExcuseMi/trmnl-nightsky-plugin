@@ -593,27 +593,6 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
     ax.set_ylim(0, 90)
     ax.axis("off")
 
-    # Constellation lines + names (RA/Dec polylines → alt/az)
-    show_names = constellations == 'names'
-    if constellations in ('names', 'lines'):
-        for name, polylines in _CONST_POLYLINES.items():
-            visible_pts: list[tuple[float, float]] = []  # (az, alt) for label centroid
-            for polyline in polylines:
-                altaz = [_radec_altaz(ra, dec, lat_rad, lst) for ra, dec in polyline]
-                for i in range(len(altaz) - 1):
-                    alt1, az1 = altaz[i]
-                    alt2, az2 = altaz[i + 1]
-                    if alt1 > 0 and alt2 > 0 and abs(az1 - az2) < 180:
-                        ax.plot([az1, az2], [alt1, alt2], color="#2a2a2a", linewidth=0.7,
-                                zorder=1, solid_capstyle="round")
-                visible_pts.extend((az, alt) for alt, az in altaz if alt > 2)
-            if show_names and visible_pts:
-                cx = sum(p[0] for p in visible_pts) / len(visible_pts)
-                cy = sum(p[1] for p in visible_pts) / len(visible_pts)
-                ax.text(cx, cy, name, ha="center", va="center",
-                        fontsize=7, color="#666", zorder=3,
-                        fontfamily="DejaVu Sans", fontweight="light")
-
     # Stars
     sizes  = np.clip((5.5 - mag_v) ** 2.2 * 0.8, 0.5, 60)
     colors = np.zeros((len(alt_v), 4))
@@ -644,11 +623,45 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
     return buf.read()
 
 
+def _constellation_svg_data(lat: str, lon: str, constellations: str) -> list[dict]:
+    if constellations == 'hide':
+        return []
+    lat_r = math.radians(float(lat))
+    now_utc = datetime.now(timezone.utc)
+    jd   = 2440587.5 + now_utc.timestamp() / 86400
+    T    = (jd - 2451545.0) / 36525.0
+    gmst = (280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * T ** 2) % 360
+    lst  = (gmst + float(lon)) % 360
+
+    show_names = constellations == 'names'
+    result = []
+    for name, polylines in _CONST_POLYLINES.items():
+        segs: list[list[float]] = []
+        label_pts: list[tuple[float, float]] = []
+        for polyline in polylines:
+            altaz = [_radec_altaz(ra, dec, lat_r, lst) for ra, dec in polyline]
+            for i in range(len(altaz) - 1):
+                alt1, az1 = altaz[i]
+                alt2, az2 = altaz[i + 1]
+                if alt1 > 0 and alt2 > 0 and abs(az1 - az2) < 180:
+                    segs.append([round(az1, 1), round(alt1, 1), round(az2, 1), round(alt2, 1)])
+            label_pts.extend((az, alt) for alt, az in altaz if alt > 2)
+        if not segs:
+            continue
+        entry: dict = {"n": name, "ls": segs}
+        if show_names and label_pts:
+            entry["laz"]  = round(sum(p[0] for p in label_pts) / len(label_pts), 1)
+            entry["lalt"] = round(sum(p[1] for p in label_pts) / len(label_pts), 1)
+        result.append(entry)
+    return result
+
+
 def _format_stars(n: int) -> str:
     return f"{n // 1000}k+" if n >= 1000 else str(n)
 
 
-async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str) -> dict:
+async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
+                         constellations: str = 'hide') -> dict:
     bortle_str = bortle_str if bortle_str in BORTLE_MAP else "5"
     bortle_info = BORTLE_MAP[bortle_str]
     bortle_int = int(bortle_str)
@@ -695,9 +708,10 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str) -> di
             "stars":           bortle_info["stars"],
             "stars_formatted": _format_stars(bortle_info["stars"]),
         },
-        "sun":      sun,
-        "moon":     moon,
-        "forecast": forecast,
-        "planets":  planets,
-        "viewing":  viewing,
+        "sun":            sun,
+        "moon":           moon,
+        "forecast":       forecast,
+        "planets":        planets,
+        "viewing":        viewing,
+        "constellations": _constellation_svg_data(lat, lon, constellations),
     }
