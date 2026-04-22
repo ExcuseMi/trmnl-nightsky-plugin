@@ -57,23 +57,25 @@ async def health():
 
 @app.route('/chart')
 async def chart():
-    lat            = request.args.get('lat', '51.5')
-    lon            = request.args.get('lon', '-0.1')
-    tz             = request.args.get('tz', 'UTC')
-    w              = int(request.args.get('w', '800').lstrip('#') or 800)
-    h              = int(request.args.get('h', '480').lstrip('#') or 480)
-    constellations = request.args.get('constellations', 'names').lstrip('#').lower()
-    # normalise legacy boolean values from old plugin versions
-    if constellations in ('yes', 'true'):   constellations = 'names'
-    if constellations in ('no',  'false'):  constellations = 'hide'
-    if constellations not in ('names', 'lines', 'hide'): constellations = 'names'
+    lat = request.args.get('lat', '51.5')
+    lon = request.args.get('lon', '-0.1')
+    tz  = request.args.get('tz', 'UTC')
+    w   = int(request.args.get('w', '800').lstrip('#') or 800)
+    h   = int(request.args.get('h', '480').lstrip('#') or 480)
 
     if not await trmnl_ip_allowed():
         return _black_png(w, h)
 
-    now       = datetime.now(timezone.utc)
-    snap      = now.replace(minute=(now.minute // 5) * 5, second=0, microsecond=0)
-    cache_key = f"{lat}|{lon}|{tz}|{w}|{h}|{snap.isoformat()}"
+    # Use the epoch timestamp supplied by /data so chart and constellation SVG
+    # share the exact same LST reference. Fall back to 5-minute snap if absent.
+    t_param = request.args.get('t')
+    if t_param:
+        epoch = datetime.fromtimestamp(int(t_param), timezone.utc)
+    else:
+        now   = datetime.now(timezone.utc)
+        epoch = now.replace(minute=(now.minute // 5) * 5, second=0, microsecond=0)
+
+    cache_key = f"{lat}|{lon}|{tz}|{w}|{h}|{int(epoch.timestamp())}"
 
     png = None
     if _redis:
@@ -87,13 +89,14 @@ async def chart():
     if png is None:
         try:
             moon, _ = _compute_moon(lat, lon, tz)
-            png     = _generate_sky_chart(lat, lon, moon, w, h, epoch=snap)
+            png     = _generate_sky_chart(lat, lon, moon, w, h, epoch=epoch)
         except Exception:
             log.exception('chart generation failed')
             return Response(status=500)
         if _redis:
             try:
                 await _redis.setex(f'chart:{cache_key}', CHART_CACHE_TTL, png)
+                log.info('chart cached for %s', cache_key[:40])
             except Exception:
                 log.warning('Redis set failed', exc_info=True)
 
@@ -136,6 +139,7 @@ async def data():
                     str(request.url).split('?')[0].rsplit('/', 1)[0]
         chart_url = base_url + '/chart?' + urlencode({
             'lat': lat, 'lon': lon, 'tz': tz, 'w': w, 'h': h,
+            't': int(snap.timestamp()),
         })
         payload['sky']['chart'] = chart_url
 
