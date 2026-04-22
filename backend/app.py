@@ -6,7 +6,7 @@ from quart import Quart, jsonify, request, Response
 from modules.utils.ip_whitelist import init_ip_whitelist, require_trmnl_ip, trmnl_ip_allowed
 from modules.providers.sky import (
     build_sky_data, geocode,
-    _compute_moon, _get_planets, _generate_sky_chart,
+    _compute_moon, _generate_sky_chart,
 )
 from modules.providers.light_pollution import init_light_pollution, lookup_bortle
 
@@ -82,8 +82,7 @@ async def chart():
     else:
         try:
             moon, _ = _compute_moon(lat, lon, tz)
-            planets = _get_planets(lat, lon)
-            png     = _generate_sky_chart(lat, lon, moon, planets, w, h, constellations)
+            png     = _generate_sky_chart(lat, lon, moon, w, h, constellations)
             # Evict stale entries (different hour) before inserting
             stale = [k for k in _chart_cache if not k.endswith(utc_hr.isoformat())]
             for k in stale:

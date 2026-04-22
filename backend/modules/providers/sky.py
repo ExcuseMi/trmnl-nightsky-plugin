@@ -543,13 +543,7 @@ def _radec_altaz(ra_deg: float, dec_deg: float, lat_rad: float, lst: float) -> t
     return math.degrees(alt_r), math.degrees(az_r)
 
 
-_PLANET_ABBR = {
-    "Mercury": "Mer", "Venus": "Ven", "Mars": "Mar",
-    "Jupiter": "Jup", "Saturn": "Sat", "Uranus": "Ura", "Neptune": "Nep",
-}
-
-
-def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list,
+def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
                         w_px: int = 800, h_px: int = 480,
                         constellations: str = 'names') -> bytes:
     ts, hip, _earth = _skyfield()
@@ -641,14 +635,6 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list,
                     alpha=abs(1 - illum / 50) * 0.85, zorder=5)
         ax.text(moon_az, moon_alt + 3.5, "Moon", ha="center", va="bottom",
                 fontsize=8, color="#aaa", zorder=6)
-
-    # Planets
-    for pl in planets:
-        abbr = _PLANET_ABBR.get(pl["name"], pl["name"][:3])
-        ax.plot(pl["az"], pl["alt"], "o", markersize=7, color="white",
-                markeredgecolor="#888", markeredgewidth=0.5, zorder=4)
-        ax.text(pl["az"], pl["alt"] + 3, abbr, ha="center", va="bottom",
-                fontsize=8, color="white", fontweight="bold", zorder=5)
 
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=DPI, facecolor="black",
