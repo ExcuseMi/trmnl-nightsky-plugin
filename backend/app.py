@@ -1,6 +1,5 @@
-import asyncio, hashlib, io, logging, os
+import asyncio, io, logging, os
 from datetime import datetime, timezone
-from email.utils import formatdate
 from urllib.parse import urlencode
 from quart import Quart, jsonify, request, Response
 from modules.utils.ip_whitelist import init_ip_whitelist, require_trmnl_ip, trmnl_ip_allowed
@@ -63,18 +62,9 @@ async def chart():
     if not await trmnl_ip_allowed():
         return _black_png(w, h)
 
-    now     = datetime.now(timezone.utc)
-    utc_hr  = now.replace(minute=0, second=0, microsecond=0)
-    # Cache key includes all params + current UTC hour so charts auto-expire hourly
+    now       = datetime.now(timezone.utc)
+    utc_hr    = now.replace(minute=0, second=0, microsecond=0)
     cache_key = f"{lat}|{lon}|{tz}|{w}|{h}|{constellations}|{utc_hr.isoformat()}"
-    etag      = '"' + hashlib.sha1(cache_key.encode()).hexdigest()[:16] + '"'
-    last_mod  = formatdate(utc_hr.timestamp(), usegmt=True)
-
-    # 304 shortcut if client has current version
-    if request.headers.get('If-None-Match') == etag:
-        return Response(status=304, headers={
-            'ETag': etag, 'Cache-Control': 'public, max-age=3600',
-        })
 
     if cache_key in _chart_cache:
         png = _chart_cache[cache_key]
@@ -83,7 +73,6 @@ async def chart():
         try:
             moon, _ = _compute_moon(lat, lon, tz)
             png     = _generate_sky_chart(lat, lon, moon, w, h, constellations)
-            # Evict stale entries (different hour) before inserting
             stale = [k for k in _chart_cache if not k.endswith(utc_hr.isoformat())]
             for k in stale:
                 del _chart_cache[k]
@@ -93,9 +82,7 @@ async def chart():
             return Response(status=500)
 
     return Response(png, mimetype='image/png', headers={
-        'Cache-Control': 'public, max-age=3600',
-        'ETag':          etag,
-        'Last-Modified': last_mod,
+        'Cache-Control': 'no-cache',
     })
 
 
