@@ -114,9 +114,9 @@ def test_known_constellations_present():
     checks = {
         "Perseus":    (18, 30),   # main body + algol loop + branches
         "Cassiopeia": (4,  8),    # W-shape (some segs may be split at wrap)
-        "Orion":      (8,  20),
-        "Auriga":     (6,  14),
-        "Taurus":     (4,  12),
+        "Orion":      (20, 30),   # d3-celestial has 24 segments
+        "Auriga":     (8,  16),
+        "Taurus":     (8,  16),
     }
     for name, (lo, hi) in checks.items():
         assert name in by_name, f"{name} missing from output"
