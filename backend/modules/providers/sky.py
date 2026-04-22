@@ -13,12 +13,13 @@ from skyfield.api import Loader, Star, wgs84  # Star/wgs84 kept for test_sky_cha
 from skyfield.data import hipparcos
 
 _SF_LOADER: "Loader | None" = None
-_HIP_DF    = None
+_HIP_DF      = None
+_HIP_FULL_DF = None  # unfiltered catalog for constellation line endpoints
 _SF_TS     = None
 _SF_EARTH  = None
 
 def _skyfield():
-    global _SF_LOADER, _HIP_DF, _SF_TS, _SF_EARTH
+    global _SF_LOADER, _HIP_DF, _HIP_FULL_DF, _SF_TS, _SF_EARTH
     if _HIP_DF is None:
         _SF_LOADER = Loader("/data/skyfield")
         _SF_TS     = _SF_LOADER.timescale()
@@ -26,6 +27,7 @@ def _skyfield():
         _SF_EARTH  = eph["earth"]
         with _SF_LOADER.open(hipparcos.URL) as f:
             df = hipparcos.load_dataframe(f)
+        _HIP_FULL_DF = df
         _HIP_DF = df[df["magnitude"] <= 6.2].copy()
     return _SF_TS, _HIP_DF, _SF_EARTH
 
@@ -356,44 +358,59 @@ def _compute_verdict(bortle: int, illumination: int, cloud_now: int) -> dict:
     return {"verdict": verdict}
 
 
-# Constellation stick figures — authoritative RA/Dec polylines from d3-celestial.
-# Each entry is a list of polylines; each polyline is a list of (ra_deg, dec_deg) points.
-_CONST_LINES_URL = "https://raw.githubusercontent.com/ofrohn/d3-celestial/master/data/constellations.lines.json"
-_CONST_NAMES_URL = "https://raw.githubusercontent.com/ofrohn/d3-celestial/master/data/constellations.json"
+# Constellation stick figures — Stellarium modern_st (Sky & Telescope lines).
+# Chains are lists of Hipparcos IDs; consecutive IDs define connected segments.
+# Using HIP IDs guarantees lines land on the exact same star positions as the chart dots.
+_CONST_INDEX_URL = "https://raw.githubusercontent.com/Stellarium/stellarium/master/skycultures/modern_st/index.json"
 _CONST_DATA_DIR  = Path(__file__).parent.parent.parent / "data"
 
-_CONST_POLYLINES_CACHE: "dict | None" = None
-_CONST_LABELS_CACHE:    "dict | None" = None
+_CONST_HIP_CHAINS_CACHE: "dict | None" = None
+_HIP_RADEC_LOOKUP_CACHE: "dict | None" = None
 
 
-def _get_const_data() -> tuple[dict[str, list[list[tuple[float, float]]]], dict[str, tuple[float, float]]]:
-    global _CONST_POLYLINES_CACHE, _CONST_LABELS_CACHE
-    if _CONST_POLYLINES_CACHE is not None:
-        return _CONST_POLYLINES_CACHE, _CONST_LABELS_CACHE
+def _get_const_hip_chains() -> "dict[str, list[list[int]]]":
+    """Return {constellation_name: [[hip_id, ...], ...]} from Stellarium modern_st."""
+    global _CONST_HIP_CHAINS_CACHE
+    if _CONST_HIP_CHAINS_CACHE is not None:
+        return _CONST_HIP_CHAINS_CACHE
 
-    lines_data = _fetch_json_cached(_CONST_LINES_URL, _CONST_DATA_DIR / "constellations.lines.json")
-    names_data = _fetch_json_cached(_CONST_NAMES_URL, _CONST_DATA_DIR / "constellations.json")
+    cache_path = _CONST_DATA_DIR / "modern_st_index.json"
+    if cache_path.exists():
+        with open(cache_path) as f:
+            data = json.load(f)
+    else:
+        log.info("Downloading %s", _CONST_INDEX_URL)
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        with urllib.request.urlopen(_CONST_INDEX_URL, timeout=15) as r:
+            data = json.loads(r.read())
+        with open(cache_path, "w") as f:
+            json.dump(data, f)
 
-    name_map = {}
-    label_map = {}
-    for f in names_data.get("features", []):
-        abbr = f["id"]
-        name = f["properties"].get("name", abbr)
-        name_map[abbr] = name
-        if "geometry" in f and f["geometry"]["type"] == "Point":
-            coords = f["geometry"]["coordinates"]
-            # RA in data is degrees, normalise to [0, 360)
-            label_map[name] = (coords[0] % 360, coords[1])
+    result: dict[str, list[list[int]]] = {}
+    for feature in data.get("constellations", []):
+        name = feature.get("common_name", {}).get("native", "")
+        chains = feature.get("lines", [])
+        if name and chains:
+            result[name] = chains
 
-    poly_map: dict[str, list[list[tuple[float, float]]]] = {}
-    for feature in lines_data.get("features", []):
-        abbr = feature["id"]
-        coords = feature["geometry"]["coordinates"]
-        poly_map[name_map.get(abbr, abbr)] = [[(ra % 360, dec) for ra, dec in line] for line in coords]
+    _CONST_HIP_CHAINS_CACHE = result
+    return result
 
-    _CONST_POLYLINES_CACHE = poly_map
-    _CONST_LABELS_CACHE = label_map
-    return poly_map, label_map
+
+def _hip_radec_lookup() -> "dict[int, tuple[float, float]]":
+    """Return {hip_id: (ra_deg, dec_deg)} for all catalog stars."""
+    global _HIP_RADEC_LOOKUP_CACHE
+    if _HIP_RADEC_LOOKUP_CACHE is not None:
+        return _HIP_RADEC_LOOKUP_CACHE
+    _skyfield()  # ensure _HIP_FULL_DF is populated
+    valid = _HIP_FULL_DF.dropna(subset=["ra_hours", "dec_degrees"])
+    ra_arr  = valid["ra_hours"].values * 15.0
+    dec_arr = valid["dec_degrees"].values
+    _HIP_RADEC_LOOKUP_CACHE = {
+        int(idx): (float(ra), float(dec))
+        for idx, ra, dec in zip(valid.index, ra_arr, dec_arr)
+    }
+    return _HIP_RADEC_LOOKUP_CACHE
 
 
 def _radec_altaz(ra_deg: float, dec_deg: float, lat_rad: float, lst: float) -> tuple[float, float]:
@@ -520,35 +537,30 @@ def _constellation_svg_data(lat: str, lon: str, constellations: str,
     gmst = (280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * T ** 2) % 360
     lst  = (gmst + float(lon)) % 360
 
+    hip_lookup = _hip_radec_lookup()
     show_names = constellations == 'names'
     result = []
-    poly_map, label_map = _get_const_data()
-    for name, polylines in poly_map.items():
+    for name, chains in _get_const_hip_chains().items():
         segs: list[list[float]] = []
-        for polyline in polylines:
-            altaz = [_radec_altaz(ra, dec, lat_r, lst) for ra, dec in polyline]
-            # If the polyline trails off into the near-zenith region (alt ≥ 88°),
-            # the star just before the clipped region becomes a dangling dead-end.
-            # Remove both the clipped tail and that stepping-stone star.
-            orig_len = len(altaz)
-            while altaz and altaz[-1][0] >= 88:
-                altaz.pop()
-            if len(altaz) < orig_len and altaz:
-                altaz.pop()
-            for i in range(len(altaz) - 1):
-                alt1, az1 = altaz[i]
-                alt2, az2 = altaz[i + 1]
+        label_pts: list[tuple[float, float]] = []
+        for chain in chains:
+            for i in range(len(chain) - 1):
+                h1, h2 = chain[i], chain[i + 1]
+                if h1 not in hip_lookup or h2 not in hip_lookup:
+                    continue
+                ra1, dec1 = hip_lookup[h1]
+                ra2, dec2 = hip_lookup[h2]
+                alt1, az1 = _radec_altaz(ra1, dec1, lat_r, lst)
+                alt2, az2 = _radec_altaz(ra2, dec2, lat_r, lst)
                 if alt1 <= 0 or alt2 <= 0 or alt1 >= 88 or alt2 >= 88:
                     continue
                 az_diff = abs(az1 - az2)
                 if az_diff <= 180:
-                    # Non-wrap segment: skip if cylindrical projection distortion
-                    # near zenith would make it appear deceptively wide.
                     if (alt1 + alt2) > 130 and az_diff > 30:
                         continue
                     segs.append([round(az1, 1), round(alt1, 1), round(az2, 1), round(alt2, 1)])
                 else:
-                    # Segment crosses the az=0/360 boundary — split it at the edge.
+                    # Segment crosses az=0/360 — split at the boundary.
                     if az1 > az2:
                         t = (360.0 - az1) / (360.0 - az1 + az2)
                         alt_x = alt1 + t * (alt2 - alt1)
@@ -559,15 +571,18 @@ def _constellation_svg_data(lat: str, lon: str, constellations: str,
                         alt_x = alt1 + t * (alt2 - alt1)
                         segs.append([round(az1, 1), round(alt1, 1), 0.0, round(alt_x, 1)])
                         segs.append([360.0, round(alt_x, 1), round(az2, 1), round(alt2, 1)])
+                label_pts.append((az1, alt1))
+                label_pts.append((az2, alt2))
+        # Stellarium chains revisit nodes when branching; deduplicate drawn segments.
+        segs = list({tuple(s): s for s in segs}.values())
         if not segs:
             continue
         entry: dict = {"n": name, "ls": segs}
-        if show_names and name in label_map:
-            lra, ldec = label_map[name]
-            lalt, laz = _radec_altaz(lra, ldec, lat_r, lst)
-            if lalt > 2:
-                entry["laz"]  = round(laz, 1)
-                entry["lalt"] = round(lalt, 1)
+        if show_names and label_pts:
+            sin_sum = sum(math.sin(math.radians(p[0])) for p in label_pts)
+            cos_sum = sum(math.cos(math.radians(p[0])) for p in label_pts)
+            entry["laz"]  = round(math.degrees(math.atan2(sin_sum, cos_sum)) % 360, 1)
+            entry["lalt"] = round(sum(p[1] for p in label_pts) / len(label_pts), 1)
         result.append(entry)
     return result
 
