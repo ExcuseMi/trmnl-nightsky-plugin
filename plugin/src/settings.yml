@@ -23,9 +23,16 @@ custom_fields:
   description: City or address to centre the sky report on.<br /><strong>Examples:</strong> London, UK · Central Park, New York · Sydney, Australia
   placeholder: London, UK
 - keyname: constellations
-  field_type: boolean
-  name: Show Constellations
-  description: Draw constellation stick figures and names on the star chart.
+  field_type: select
+  name: Constellations
+  description: Draw constellation stick figures on the star chart.
+  options:
+  - label: Show with names
+    value: names
+  - label: Show lines only
+    value: lines
+  - label: Hide
+    value: hide
 - keyname: show_info_panel
   field_type: boolean
   name: Show Info Panel

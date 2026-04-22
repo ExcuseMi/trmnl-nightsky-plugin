@@ -22,7 +22,7 @@
 
   {% comment %} ── Full-screen sky chart ── {% endcomment %}
   {% if data.sky.chart != "" %}
-    <img class="image image--cover"
+    <img class="image image--cover image-dither"
          src="{{ data.sky.chart }}"
          style="position:absolute;top:0;left:0;width:100%;height:100%">
   {% else %}

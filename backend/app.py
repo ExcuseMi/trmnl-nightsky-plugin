@@ -1,9 +1,9 @@
-import asyncio, hashlib, logging, os
+import asyncio, hashlib, io, logging, os
 from datetime import datetime, timezone
 from email.utils import formatdate
 from urllib.parse import urlencode
 from quart import Quart, jsonify, request, Response
-from modules.utils.ip_whitelist import init_ip_whitelist, require_trmnl_ip
+from modules.utils.ip_whitelist import init_ip_whitelist, require_trmnl_ip, trmnl_ip_allowed
 from modules.providers.sky import (
     build_sky_data, geocode,
     _compute_moon, _get_planets, _generate_sky_chart,
@@ -15,8 +15,25 @@ log = logging.getLogger(__name__)
 
 app = Quart(__name__)
 
-# In-process chart cache: key → (etag, last_modified_ts, png_bytes)
+# In-process chart cache: key → png_bytes
 _chart_cache: dict = {}
+
+
+def _black_png(w: int, h: int) -> Response:
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(figsize=(w / 100, h / 100), dpi=100)
+    fig.patch.set_facecolor("black")
+    ax.set_facecolor("black")
+    ax.axis("off")
+    fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=100, facecolor="black")
+    plt.close(fig)
+    buf.seek(0)
+    return Response(buf.read(), mimetype='image/png',
+                    headers={'Cache-Control': 'no-store'})
 
 
 @app.before_serving
@@ -37,7 +54,14 @@ async def chart():
     tz             = request.args.get('tz', 'UTC')
     w              = int(request.args.get('w', '800').lstrip('#') or 800)
     h              = int(request.args.get('h', '480').lstrip('#') or 480)
-    constellations = request.args.get('constellations', 'yes').lstrip('#').lower() not in ('no', 'false')
+    constellations = request.args.get('constellations', 'names').lstrip('#').lower()
+    # normalise legacy boolean values from old plugin versions
+    if constellations in ('yes', 'true'):   constellations = 'names'
+    if constellations in ('no',  'false'):  constellations = 'hide'
+    if constellations not in ('names', 'lines', 'hide'): constellations = 'names'
+
+    if not await trmnl_ip_allowed():
+        return _black_png(w, h)
 
     now     = datetime.now(timezone.utc)
     utc_hr  = now.replace(minute=0, second=0, microsecond=0)
@@ -85,7 +109,10 @@ async def data():
     tz            = request.args.get('tz', 'UTC')
     w             = request.args.get('w', '800').lstrip('#') or '800'
     h             = request.args.get('h', '480').lstrip('#') or '480'
-    constellations = request.args.get('constellations', 'yes').lstrip('#')
+    constellations = request.args.get('constellations', 'names').lstrip('#').lower()
+    if constellations in ('yes', 'true'):  constellations = 'names'
+    if constellations in ('no',  'false'): constellations = 'hide'
+    if constellations not in ('names', 'lines', 'hide'): constellations = 'names'
 
     try:
         if location:

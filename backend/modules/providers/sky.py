@@ -551,7 +551,7 @@ _PLANET_ABBR = {
 
 def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list,
                         w_px: int = 800, h_px: int = 480,
-                        constellations: bool = True) -> str:
+                        constellations: str = 'names') -> bytes:
     ts, hip, _earth = _skyfield()
     lat_f, lon_f = float(lat), float(lon)
 
@@ -600,7 +600,8 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list,
     ax.axis("off")
 
     # Constellation lines + names (RA/Dec polylines → alt/az)
-    if constellations:
+    show_names = constellations == 'names'
+    if constellations in ('names', 'lines'):
         for name, polylines in _CONST_POLYLINES.items():
             visible_pts: list[tuple[float, float]] = []  # (az, alt) for label centroid
             for polyline in polylines:
@@ -612,11 +613,12 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict, planets: list,
                         ax.plot([az1, az2], [alt1, alt2], color="#2a2a2a", linewidth=0.7,
                                 zorder=1, solid_capstyle="round")
                 visible_pts.extend((az, alt) for alt, az in altaz if alt > 2)
-            if visible_pts:
+            if show_names and visible_pts:
                 cx = sum(p[0] for p in visible_pts) / len(visible_pts)
                 cy = sum(p[1] for p in visible_pts) / len(visible_pts)
                 ax.text(cx, cy, name, ha="center", va="center",
-                        fontsize=6, color="#555", zorder=3, fontstyle="italic")
+                        fontsize=7, color="#666", zorder=3,
+                        fontfamily="DejaVu Sans", fontweight="light")
 
     # Stars
     sizes  = np.clip((5.5 - mag_v) ** 2.2 * 0.8, 0.5, 60)

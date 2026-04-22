@@ -59,6 +59,14 @@ def _client_ip() -> str:
     return request.remote_addr
 
 
+async def trmnl_ip_allowed() -> bool:
+    if not ENABLE_IP_WHITELIST:
+        return True
+    ip = _client_ip()
+    async with _lock:
+        return ip in _ips
+
+
 def require_trmnl_ip(f):
     @wraps(f)
     async def decorated(*args, **kwargs):
