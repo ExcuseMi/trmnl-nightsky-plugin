@@ -160,9 +160,9 @@ async def data():
         base_url  = os.getenv('BASE_URL', '').rstrip('/') or \
                     str(request.url).split('?')[0].rsplit('/', 1)[0]
         
-        # 1:1 scale: 90 degrees altitude = 480px height => 360 degrees azimuth = 1920px width
-        cw_val = 1920
-        ch_val = 480
+        # 1:1 scale: 90 degrees altitude = H height => 360 degrees azimuth = H * 4 width
+        ch_val = int(h)
+        cw_val = ch_val * 4
         
         chart_params = {
             'lat': lat, 'lon': lon, 'tz': tz, 'w': cw_val, 'h': ch_val,
