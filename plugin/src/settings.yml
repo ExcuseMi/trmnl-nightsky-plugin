@@ -14,7 +14,7 @@ custom_fields:
 - keyname: author_info
   name: About This Plugin
   field_type: author_bio
-  description: "Tonight's sky conditions for your location — Bortle scale, stars visible, moon phase, visible planets, and cloud cover.<br /><br /><a href=\"https://github.com/ExcuseMi/trmnl-nightsky-plugin/blob/main/GUIDE.md\">\U0001F4D6 Plugin Guide</a><br /><br /><strong>Data sources:</strong> <a href=\"https://aa.usno.navy.mil/data/api\">USNO Astronomical API</a> · <a href=\"https://open-meteo.com\">Open-Meteo</a> · <a href=\"https://www.lightpollutionmap.info\">lightpollutionmap.info</a> (VIIRS 2024)"
+  description: "A real-time star chart for your location with an optional conditions overlay. The chart renders the sky as it looks right now — stars sized by magnitude, moon position, and visible planets. The overlay shows Bortle scale, naked-eye limiting magnitude, moon phase &amp; illumination, cloud cover forecast, temperature, and a best-viewing window estimate.<br /><br /><a href=\"https://github.com/ExcuseMi/trmnl-nightsky-plugin/blob/main/GUIDE.md\">\U0001F4D6 Plugin Guide</a><br /><br /><strong>Data sources:</strong> <a href=\"https://aa.usno.navy.mil/data/api\">USNO Astronomical API</a> · <a href=\"https://open-meteo.com\">Open-Meteo</a> · <a href=\"https://www.lightpollutionmap.info\">lightpollutionmap.info</a> (VIIRS 2024)"
   github_url: https://github.com/ExcuseMi/trmnl-nightsky-plugin
   category: nature
 - keyname: location
@@ -27,12 +27,11 @@ custom_fields:
   name: Constellations
   description: Draw constellation stick figures on the star chart.
   options:
-  - label: Show with names
-    value: names
-  - label: Show lines only
-    value: lines
-  - label: Hide
-    value: hide
+  - Show with names: names
+  - Show lines only: lines
+  - Hide: hide
+  optional: true
+  default: hide
 - keyname: show_info_panel
   field_type: boolean
   name: Show Info Panel
