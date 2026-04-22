@@ -120,6 +120,7 @@ async def data():
     if constellations in ('yes', 'true'):  constellations = 'names'
     if constellations in ('no',  'false'): constellations = 'hide'
     if constellations not in ('names', 'lines', 'hide'): constellations = 'names'
+    planet_names = request.args.get('planet_names', 'true') == 'true'
     daytime_mode = request.args.get('daytime_mode', 'ignore').lstrip('#').lower()
 
     try:
@@ -169,6 +170,11 @@ async def data():
             chart_params['nelm'] = BORTLE_MAP.get(bortle_str, BORTLE_MAP['5'])['nelm']
         if daytime_mode == 'ignore':
             chart_params['hide_sun'] = 'true'
+        if daytime_mode == 'ignore':
+            chart_params['hide_sun'] = 'true'
+
+        chart_params['planet_names'] = f'{planet_names}'.lower()
+
 
         chart_url = base_url + '/chart?' + urlencode(chart_params)
         payload['sky']['chart']   = chart_url
