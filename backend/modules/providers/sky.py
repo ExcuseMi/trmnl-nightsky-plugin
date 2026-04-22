@@ -372,12 +372,12 @@ def _compute_verdict(bortle: int, illumination: int, cloud_now: int) -> dict:
     if bortle <= 2:   score += 1
     score = max(0, min(10, score))
 
-    if score >= 8:   verdict, stars = "Excellent", "★★★★"
-    elif score >= 6: verdict, stars = "Good",      "★★★"
-    elif score >= 4: verdict, stars = "Fair",       "★★"
-    else:            verdict, stars = "Poor",       "★"
+    if score >= 8:   verdict = "Excellent"
+    elif score >= 6: verdict = "Good"
+    elif score >= 4: verdict = "Fair"
+    else:            verdict = "Poor"
 
-    return {"verdict": verdict, "stars_text": stars, "score": score}
+    return {"verdict": verdict, "score": score}
 
 
 _PLANET_ABBR = {
