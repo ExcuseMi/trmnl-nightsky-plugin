@@ -154,7 +154,7 @@ async def data():
                 # Snap dusk to nearest 5 mins for better caching
                 snap = dusk.replace(minute=(dusk.minute // 5) * 5, second=0, microsecond=0)
 
-        payload = await build_sky_data(lat, lon, bortle_str, tz, constellations, snap, location_name)
+        payload = await build_sky_data(lat, lon, bortle_str, tz, constellations, snap, location_name, w=w, h=h)
 
         # Build chart URL — prefer BASE_URL env var (proxy strips path prefix)
         base_url  = os.getenv('BASE_URL', '').rstrip('/') or \

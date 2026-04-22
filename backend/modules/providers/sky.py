@@ -33,6 +33,35 @@ def _skyfield():
 
 log = logging.getLogger(__name__)
 
+class SkyProjection:
+    def __init__(self, center_az, center_alt, w, h):
+        self.az0 = math.radians(center_az)
+        self.alt0 = math.radians(center_alt)
+        self.w = w
+        self.h = h
+        # Scale: map ~100 degrees of height to the screen height
+        self.scale = (h / math.radians(100))
+
+    def project(self, az_deg, alt_deg):
+        az = math.radians(az_deg)
+        alt = math.radians(alt_deg)
+        cos_alt, sin_alt = math.cos(alt), math.sin(alt)
+        cos_alt0, sin_alt0 = math.cos(self.alt0), math.sin(self.alt0)
+        daz = az - self.az0
+        cos_daz, sin_daz = math.cos(daz), math.sin(daz)
+
+        # Stereographic projection formula
+        denom = 1 + sin_alt0 * sin_alt + cos_alt0 * cos_alt * cos_daz
+        if denom < 0.1: return None, None  # Behind camera
+
+        k = 2.0 / denom
+        x = k * cos_alt * sin_daz
+        y = k * (cos_alt0 * sin_alt - sin_alt0 * cos_alt * cos_daz)
+
+        px = self.w / 2 + x * self.scale
+        py = self.h / 2 - y * self.scale # SVG Y is down
+        return round(px, 1), round(py, 1)
+
 BORTLE_MAP = {
     "1": {"nelm": 7.8, "stars": 45000, "label": "Exceptional"},
     "2": {"nelm": 7.3, "stars": 15000, "label": "Truly dark"},
@@ -437,8 +466,6 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
     ts, hip, _earth = _skyfield()
     lat_f, lon_f = float(lat), float(lon)
 
-    # Local Sidereal Time via GMST (accurate to ~1 arcmin — fine for a display chart)
-    # Use caller-supplied epoch (utc_hr) so chart and constellation SVG share the same LST.
     if epoch is not None:
         jd = 2440587.5 + epoch.timestamp() / 86400
     else:
@@ -447,7 +474,7 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
     gmst = (280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * T ** 2) % 360
     lst  = (gmst + lon_f) % 360  # degrees
 
-    # Vectorised equatorial → horizontal
+    # Equatorial → Horizontal for all catalog stars
     ra_deg  = hip["ra_hours"].values * 15.0
     dec_rad = np.radians(hip["dec_degrees"].values)
     ha_rad  = np.radians(lst - ra_deg)
@@ -456,77 +483,78 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
     sin_alt = (np.sin(dec_rad) * math.sin(lat_rad)
                + np.cos(dec_rad) * math.cos(lat_rad) * np.cos(ha_rad))
     alt_rad = np.arcsin(np.clip(sin_alt, -1.0, 1.0))
-
     cos_alt = np.cos(alt_rad)
     safe    = cos_alt > 1e-10
-    cos_az  = np.where(
-        safe,
-        (np.sin(dec_rad) - np.sin(alt_rad) * math.sin(lat_rad))
-        / np.where(safe, cos_alt * math.cos(lat_rad), 1.0),
-        0.0,
-    )
-    az_rad = np.arccos(np.clip(cos_az, -1.0, 1.0))
-    az_rad = np.where(np.sin(ha_rad) > 0, 2 * np.pi - az_rad, az_rad)
+    cos_az  = np.where(safe, (np.sin(dec_rad) - np.sin(alt_rad) * math.sin(lat_rad)) / np.where(safe, cos_alt * math.cos(lat_rad), 1.0), 0.0)
+    az_rad  = np.arccos(np.clip(cos_az, -1.0, 1.0))
+    az_rad  = np.where(np.sin(ha_rad) > 0, 2 * np.pi - az_rad, az_rad)
 
     alt_deg = np.degrees(alt_rad)
     az_deg  = np.degrees(az_rad)
-    above   = alt_deg > 0
-    alt_v, az_v = alt_deg[above], az_deg[above]
-    mag_v       = hip["magnitude"].values[above]
+    
+    # ── Perspective Projection ──────────────────────────────────────────────────
+    proj = SkyProjection(180, 40, w_px, h_px)
+    
+    # Vectorized projection for matplotlib
+    sin_alt0, cos_alt0 = math.sin(proj.alt0), math.cos(proj.alt0)
+    daz_rad = np.radians(az_deg) - proj.az0
+    cos_daz, sin_daz = np.cos(daz_rad), np.sin(daz_rad)
+    
+    denom = 1 + sin_alt0 * np.sin(alt_rad) + cos_alt0 * cos_alt * cos_daz
+    visible_mask = (denom > 0.1) & (alt_deg > -10)
+    
+    k = 2.0 / denom[visible_mask]
+    x_proj = k * cos_alt[visible_mask] * sin_daz[visible_mask]
+    y_proj = k * (cos_alt0 * np.sin(alt_rad)[visible_mask] - sin_alt0 * cos_alt[visible_mask] * cos_daz[visible_mask])
+    
+    px_v = w_px / 2 + x_proj * proj.scale
+    py_v = h_px / 2 - y_proj * proj.scale
+    mag_v = hip["magnitude"].values[visible_mask]
 
-    # ── matplotlib rectangular panoramic chart ──────────────────────────────────
+    # ── matplotlib chart ───────────────────────────────────────────────────────
     W_PX, H_PX, DPI = w_px, h_px, 100
     fig, ax = plt.subplots(figsize=(W_PX / DPI, H_PX / DPI), dpi=DPI)
     fig.patch.set_facecolor("black")
     ax.set_facecolor("black")
     fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
-    ax.set_xlim(0, 360)
-    ax.set_ylim(0, 90)
+    ax.set_xlim(0, W_PX)
+    ax.set_ylim(H_PX, 0) # Flip Y for SVG coordinates
     ax.axis("off")
 
-    # Scale factor for markers based on height (baseline is 480px)
     sf = H_PX / 480.0
-
-    # Stars
     sizes  = np.clip((6.2 - mag_v) ** 2.2 * 0.8 * sf, 0.5 * sf, 60 * sf)
-    ax.scatter(az_v, alt_v, s=sizes, c="white", linewidths=0, zorder=2)
+    ax.scatter(px_v, py_v, s=sizes, c="white", linewidths=0, zorder=2)
 
     # Moon
     moon_alt = moon_data.get("alt", -1)
-    if moon_alt > 0:
-        moon_az  = moon_data.get("az", 0)
-        illum    = moon_data.get("illumination", 50)
-        ax.plot(moon_az, moon_alt, "o", markersize=16 * sf, color="white",
-                markeredgecolor="#888", markeredgewidth=0.5 * sf, zorder=4)
-        if 2 < illum < 98:
-            # Simple wedge for phase in the PNG (JS SVG moon will overlap this)
-            ax.plot(moon_az, moon_alt, "o", markersize=16 * sf, color="black",
-                    alpha=0.7, zorder=5) # Alpha kept slightly for shadow blending
-        ax.text(moon_az, moon_alt + 3.5, "Moon", ha="center", va="bottom",
-                fontsize=8 * sf, color="#aaa", zorder=6)
+    if moon_alt > -10:
+        mx, my = proj.project(moon_data.get("az", 0), moon_alt)
+        if mx is not None:
+            illum = moon_data.get("illumination", 50)
+            ax.plot(mx, my, "o", markersize=16 * sf, color="white", markeredgecolor="#888", markeredgewidth=0.5 * sf, zorder=4)
+            if 2 < illum < 98:
+                ax.plot(mx, my, "o", markersize=16 * sf, color="black", alpha=0.7, zorder=5)
+            ax.text(mx, my + 15 * sf, "Moon", ha="center", va="bottom", fontsize=8 * sf, color="#aaa", zorder=6)
 
     # Sun
     if sun_data:
         s_alt = sun_data.get("alt", -90)
-        s_az  = sun_data.get("az", 0)
-        if s_alt > -5:
-            s_alt = max(0.5, s_alt)
-            ax.plot(s_az, s_alt, "o", markersize=26 * sf, color="white", alpha=0.12, zorder=3)
-            ax.plot(s_az, s_alt, "o", markersize=16 * sf, color="white",
-                    markeredgecolor="#bbb", markeredgewidth=0.5 * sf, zorder=5)
-            ax.text(s_az, s_alt + 4.5, "Sun", ha="center", va="bottom",
-                    fontsize=8 * sf, color="#ccc", zorder=6)
+        if s_alt > -10:
+            sx, sy = proj.project(sun_data.get("az", 0), s_alt)
+            if sx is not None:
+                ax.plot(sx, sy, "o", markersize=26 * sf, color="white", alpha=0.12, zorder=3)
+                ax.plot(sx, sy, "o", markersize=16 * sf, color="white", markeredgecolor="#bbb", markeredgewidth=0.5 * sf, zorder=5)
+                ax.text(sx, sy + 15 * sf, "Sun", ha="center", va="bottom", fontsize=8 * sf, color="#ccc", zorder=6)
 
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=DPI, facecolor="black",
-                bbox_inches=None, pad_inches=0)
+    fig.savefig(buf, format="png", dpi=DPI, facecolor="black", bbox_inches=None, pad_inches=0)
     plt.close(fig)
     buf.seek(0)
     return buf.read()
 
 
-def _constellation_svg_data(lat: str, lon: str, constellations: str,
+def _constellation_svg_data(lat: str, lon: str, constellations: str, w: int, h: int,
                             epoch: "datetime | None" = None) -> list[dict]:
     if constellations == 'hide':
         return []
@@ -537,12 +565,12 @@ def _constellation_svg_data(lat: str, lon: str, constellations: str,
     gmst = (280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * T ** 2) % 360
     lst  = (gmst + float(lon)) % 360
 
+    proj = SkyProjection(180, 40, w, h)
     hip_lookup = _hip_radec_lookup()
     show_names = constellations == 'names'
     result = []
     for name, chains in _get_const_hip_chains().items():
         segs: list[list[float]] = []
-        label_stars: dict[int, tuple[float, float]] = {}  # hip_id → (az, alt), unique
         for chain in chains:
             for i in range(len(chain) - 1):
                 h1, h2 = chain[i], chain[i + 1]
@@ -552,36 +580,23 @@ def _constellation_svg_data(lat: str, lon: str, constellations: str,
                 ra2, dec2 = hip_lookup[h2]
                 alt1, az1 = _radec_altaz(ra1, dec1, lat_r, lst)
                 alt2, az2 = _radec_altaz(ra2, dec2, lat_r, lst)
-                if alt1 <= 0 or alt2 <= 0:
-                    continue
-                az_diff = abs(az1 - az2)
-                if az_diff <= 180:
-                    segs.append([round(az1, 1), round(alt1, 1), round(az2, 1), round(alt2, 1)])
-                else:
-                    # Segment crosses az=0/360 — split at the boundary.
-                    if az1 > az2:
-                        t = (360.0 - az1) / (360.0 - az1 + az2)
-                        alt_x = alt1 + t * (alt2 - alt1)
-                        segs.append([round(az1, 1), round(alt1, 1), 360.0, round(alt_x, 1)])
-                        segs.append([0.0, round(alt_x, 1), round(az2, 1), round(alt2, 1)])
-                    else:
-                        t = az1 / (az1 + 360.0 - az2)
-                        alt_x = alt1 + t * (alt2 - alt1)
-                        segs.append([round(az1, 1), round(alt1, 1), 0.0, round(alt_x, 1)])
-                        segs.append([360.0, round(alt_x, 1), round(az2, 1), round(alt2, 1)])
-                label_stars[h1] = (az1, alt1)
-                label_stars[h2] = (az2, alt2)
-        # Stellarium chains revisit nodes when branching; deduplicate drawn segments.
-        segs = list({tuple(s): s for s in segs}.values())
+                x1, y1 = proj.project(az1, alt1)
+                x2, y2 = proj.project(az2, alt2)
+                if x1 is not None and x2 is not None:
+                    margin = 200
+                    if (-margin < x1 < w+margin and -margin < y1 < h+margin) or \
+                       (-margin < x2 < w+margin and -margin < y2 < h+margin):
+                        segs.append([x1, y1, x2, y2])
         if not segs:
             continue
         entry: dict = {"n": name, "ls": segs}
-        if show_names and label_stars:
-            pts = list(label_stars.values())
-            sin_sum = sum(math.sin(math.radians(p[0])) for p in pts)
-            cos_sum = sum(math.cos(math.radians(p[0])) for p in pts)
-            entry["laz"]  = round(math.degrees(math.atan2(sin_sum, cos_sum)) % 360, 1)
-            entry["lalt"] = round(sum(p[1] for p in pts) / len(pts), 1)
+        if show_names:
+            all_x = [coord for s in segs for coord in [s[0], s[2]]]
+            all_y = [coord for s in segs for coord in [s[1], s[3]]]
+            lx = sum(all_x) / len(all_x)
+            ly = sum(all_y) / len(all_y)
+            if 0 < lx < w and 0 < ly < h:
+                entry["x"], entry["y"] = round(lx, 1), round(ly, 1)
         result.append(entry)
     return result
 
@@ -590,10 +605,12 @@ def _constellation_svg_data(lat: str, lon: str, constellations: str,
 async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
                          constellations: str = 'hide',
                          epoch: "datetime | None" = None,
-                         location_name: str | None = None) -> dict:
+                         location_name: str | None = None,
+                         w: str = '800', h: str = '480') -> dict:
     bortle_str = bortle_str if bortle_str in BORTLE_MAP else "5"
     bortle_info = BORTLE_MAP[bortle_str]
     bortle_int = int(bortle_str)
+    w_int, h_int = int(w), int(h)
 
     try:
         local_tz = ZoneInfo(tz_str)
@@ -604,11 +621,18 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
     date_str = ref_utc.astimezone(local_tz).strftime("%-d %b %Y")
     time_str = ref_utc.astimezone(local_tz).strftime("%H:%M")
 
+    # Projection
+    proj = SkyProjection(180, 40, w_int, h_int)
+
     moon, best_from = _compute_moon(lat, lon, tz_str, epoch=ref_utc)
-    moon.pop("alt", None)
-    moon.pop("az", None)
+    mx, my = proj.project(moon.get("az", 0), moon.get("alt", -90))
+    moon["x"], moon["y"] = mx, my
+    
     moon["days"] = [_moon_day(lat, lon, tz_str, i, epoch=ref_utc) for i in range(4)]
+    
     sun = _compute_sun(lat, lon, tz_str, epoch=ref_utc)
+    sx, sy = proj.project(sun.get("az", 0), sun.get("alt", -90))
+    sun["x"], sun["y"] = sx, sy
     is_day = sun.pop("is_day", False)
 
     async with aiohttp.ClientSession() as session:
@@ -620,6 +644,10 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
     forecast = _build_forecast(weather_raw, ref_utc)
 
     planets = _get_planets(lat, lon, epoch=ref_utc)
+    for pl in planets:
+        px, py = proj.project(pl["az"], pl["alt"])
+        pl["x"], pl["y"] = px, py
+
     viewing = _compute_verdict(bortle_int, moon["illumination"], forecast["now"].get("cloud", 0))
     viewing["date"] = date_str
     viewing["chart_time"] = time_str
@@ -640,5 +668,5 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
         "forecast":       forecast,
         "planets":        planets,
         "viewing":        viewing,
-        "constellations": _constellation_svg_data(lat, lon, constellations, ref_utc),
+        "constellations": _constellation_svg_data(lat, lon, constellations, w_int, h_int, ref_utc),
     }
