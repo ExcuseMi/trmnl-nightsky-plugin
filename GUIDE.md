@@ -11,7 +11,7 @@ Tonight's stargazing conditions on your TRMNL display: a real-time star chart, l
 | **Location** | City or address for the sky report. Examples: `London, UK` · `Sydney, Australia` · `Central Park, New York` |
 | **Show Info Panel** | Show the conditions overlay (verdict, moon, weather, planets) on top of the chart. Disable for a clean chart-only view. |
 | **During Daytime** | What to show when the sun is up: the chart as-is, fast-forward to earliest nightfall, or skip the plugin entirely. |
-| **Constellations** | Draw constellation stick figures on the chart, optionally with names. |
+| **Constellations** | Draw constellation lines on the chart, optionally with names. |
 | **Show Planet Names** | Label visible planets on the chart. |
 | **Realistic Star Count** | When enabled, limits the chart to stars actually visible under your local light pollution (Bortle/NELM). Off by default — useful for comparing what a dark-sky site would look like. |
 | **Time Format** | 24-hour or 12-hour (AM/PM). |
@@ -85,7 +85,7 @@ Each visible planet (altitude > 5°) is listed with direction, altitude in degre
 |--------|----------|
 | [Hipparcos Catalog](https://www.cosmos.esa.int/web/hipparcos) + [Skyfield](https://rhodesmill.org/skyfield/) | ~9,000 naked-eye stars (magnitude ≤ 6.2) for the sky chart |
 | [PyEphem](https://rhodesmill.org/pyephem/) | Planet and moon positions, sun/moon rise–set times |
-| [Stellarium modern_st](https://github.com/Stellarium/stellarium) | Constellation stick figure lines |
+| [Stellarium modern_st](https://github.com/Stellarium/stellarium) | Constellation lines |
 | [Open-Meteo](https://open-meteo.com) | Cloud cover, temperature, dew point, wind, humidity |
 | [lightpollutionmap.info](https://www.lightpollutionmap.info) | Bortle scale and NELM (VIIRS 2024 satellite data) |
 

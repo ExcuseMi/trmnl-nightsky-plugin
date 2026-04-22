@@ -14,7 +14,7 @@
 {% endif %}
 
 {% capture cloud %}
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 10" width="12" height="9" style="vertical-align:-1px;display:inline-block"><path d="M3 9a3 3 0 0 1-2.5-4.5A3.5 3.5 0 0 1 6.5 2a3 3 0 0 1 5.5 1.5A2.5 2.5 0 0 1 11 9H3z" fill="currentColor" stroke="currentColor" stroke-width="0.4" stroke-linejoin="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 10" width="12" height="9" class="mr--1" style="vertical-align:-1px;display:inline-block"><path d="M3 9a3 3 0 0 1-2.5-4.5A3.5 3.5 0 0 1 6.5 2a3 3 0 0 1 5.5 1.5A2.5 2.5 0 0 1 11 9H3z" fill="#aaa" stroke="#aaa" stroke-width="0.4" stroke-linejoin="round"/></svg>
 {% endcapture %}
 
 <style>
@@ -86,10 +86,10 @@
 
       <div class="flex align--center gap--small flex--evenly">
         <span class="label label--small lg:label--base">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7 13" width="7" height="12" style="vertical-align:-2px;display:inline-block"><rect x="2" y="0" width="3" height="7.5" rx="1.5" fill="currentColor"/><rect x="2.5" y="5.5" width="2" height="4" fill="currentColor"/><circle cx="3.5" cy="10.5" r="2.5" fill="currentColor"/></svg> {{ data.forecast.now.temp }}°C
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7 13" width="7" height="12" class="mr--1" style="vertical-align:-2px;display:inline-block"><rect x="2" y="0" width="3" height="7.5" rx="1.5" fill="#aaa"/><rect x="2.5" y="5.5" width="2" height="4" fill="#aaa"/><circle cx="3.5" cy="10.5" r="2.5" fill="#aaa"/></svg> {{ data.forecast.now.temp }}°C
         </span>
         <span class="label label--small lg:label--base">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 12" width="8" height="12" style="vertical-align:-2px;display:inline-block"><path d="M5 1C3 4 1 7 1 9a4 4 0 0 0 8 0C9 7 7 4 5 1Z" fill="currentColor"/></svg> {{ data.forecast.now.dew_point }}°C
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 12" width="8" height="12" class="mr--1" style="vertical-align:-2px;display:inline-block"><path d="M5 1C3 4 1 7 1 9a4 4 0 0 0 8 0C9 7 7 4 5 1Z" fill="#aaa"/></svg> {{ data.forecast.now.dew_point }}°C
         </span>
         <span class="label label--small lg:label--base">
           {{ cloud }} {{ data.forecast.now.wind_dir }} {{ data.forecast.now.wind_speed }} km/h
@@ -163,7 +163,7 @@
           {{ cloud }} {{ data.forecast.now.cloud }}%
         </span>
         <span class="label label--small">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7 13" width="7" height="12" style="vertical-align:-2px;display:inline-block"><rect x="2" y="0" width="3" height="7.5" rx="1.5" fill="currentColor"/><rect x="2.5" y="5.5" width="2" height="4" fill="currentColor"/><circle cx="3.5" cy="10.5" r="2.5" fill="currentColor"/></svg> {{ data.forecast.now.temp }}°C
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7 13" width="7" height="12" class="mr--1" style="vertical-align:-2px;display:inline-block"><rect x="2" y="0" width="3" height="7.5" rx="1.5" fill="#aaa"/><rect x="2.5" y="5.5" width="2" height="4" fill="#aaa"/><circle cx="3.5" cy="10.5" r="2.5" fill="#aaa"/></svg> {{ data.forecast.now.temp }}°C
         </span>
       </div>
 
