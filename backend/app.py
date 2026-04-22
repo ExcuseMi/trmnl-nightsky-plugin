@@ -1,4 +1,4 @@
-import asyncio, logging
+import asyncio, logging, os
 from urllib.parse import urlencode
 from quart import Quart, jsonify, request, Response
 from modules.utils.ip_whitelist import init_ip_whitelist, require_trmnl_ip
@@ -69,8 +69,9 @@ async def data():
 
         payload = await build_sky_data(lat, lon, bortle_str, tz)
 
-        # Build chart URL from this request's own base URL
-        base_url  = str(request.url).split('?')[0].rsplit('/', 1)[0]
+        # Build chart URL — prefer BASE_URL env var (proxy strips path prefix)
+        base_url  = os.getenv('BASE_URL', '').rstrip('/') or \
+                    str(request.url).split('?')[0].rsplit('/', 1)[0]
         chart_url = base_url + '/chart?' + urlencode({
             'lat': lat, 'lon': lon, 'tz': tz,
             'w': w, 'h': h, 'constellations': constellations,
