@@ -28,8 +28,8 @@ async def data():
     lat      = request.args.get('lat', '').strip()
     lon      = request.args.get('lon', '').strip()
     tz       = request.args.get('tz', 'UTC')
-    w        = int(request.args.get('w', 800))
-    h        = int(request.args.get('h', 480))
+    w        = int(request.args.get('w', '800').lstrip('#') or 800)
+    h        = int(request.args.get('h', '480').lstrip('#') or 480)
 
     try:
         if location:
