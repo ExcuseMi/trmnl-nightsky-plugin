@@ -165,16 +165,13 @@ async def data():
         chart_params = {
             'lat': lat, 'lon': lon, 'tz': tz, 'w': cw_val, 'h': ch_val,
             't': int(snap.timestamp()),
+            'constellations': constellations,  # ADD THIS
+            'planet_names': str(planet_names).lower(),  # FIX THIS (was duplicate hide_sun)
         }
         if realistic_stars:
             chart_params['nelm'] = BORTLE_MAP.get(bortle_str, BORTLE_MAP['5'])['nelm']
         if daytime_mode == 'ignore':
             chart_params['hide_sun'] = 'true'
-        if daytime_mode == 'ignore':
-            chart_params['hide_sun'] = 'true'
-
-        chart_params['planet_names'] = f'{planet_names}'.lower()
-
 
         chart_url = base_url + '/chart?' + urlencode(chart_params)
         payload['sky']['chart']   = chart_url
