@@ -545,7 +545,7 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
                         continue
                     if (-margin < x1 < W_PX+margin and -margin < y1 < H_PX+margin) or \
                        (-margin < x2 < W_PX+margin and -margin < y2 < H_PX+margin):
-                        ax.plot([x1, x2], [y1, y2], color='#333', linewidth=0.7 * sf,
+                        ax.plot([x1, x2], [y1, y2], color='#666', linewidth=0.7 * sf,
                                 zorder=1, solid_capstyle='round')
 
     sizes  = np.clip((6.2 - mag_v) ** 2.2 * 0.8 * sf, 0.5 * sf, 60 * sf)
