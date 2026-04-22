@@ -22,5 +22,9 @@ custom_fields:
   name: Location
   description: City or address to centre the sky report on.<br /><strong>Examples:</strong> London, UK · Central Park, New York · Sydney, Australia
   placeholder: London, UK
+- keyname: hide_info_panel
+  field_type: boolean
+  name: Hide Info Panel
+  description: Show only the star chart, without the conditions overlay.
 name: Night Sky
 refresh_interval: 1440
