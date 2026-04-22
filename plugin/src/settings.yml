@@ -6,7 +6,7 @@ static_data: ''
 polling_verb: get
 framework_version: 2.3.7
 serverless_language: 
-polling_url: https://trmnl.bettens.dev/nightsky/data?location={{ location | url_encode }}&tz={{ trmnl.user.time_zone_iana }}&w={{ trmnl.device.width }}&h={{ trmnl.device.height }}&constellations={{ constellations }}&daytime_mode={{ daytime_mode }}
+polling_url: 'https://trmnl.bettens.dev/nightsky/data?location={{ location | url_encode }}&tz={{ trmnl.user.time_zone_iana }}&w={{ trmnl.device.width | default: 800 }}&h={{ trmnl.device.height | default: 480 }}&constellations={{ constellations }}&daytime_mode={{ daytime_mode }}'
 polling_headers: ''
 polling_body: ''
 id: 290823
@@ -62,4 +62,4 @@ custom_fields:
   name: Show Info Panel
   description: Show the conditions overlay on top of the star chart.
 name: Night Sky
-refresh_interval: 1440
+refresh_interval: 15

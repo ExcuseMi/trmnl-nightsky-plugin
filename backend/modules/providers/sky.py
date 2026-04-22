@@ -475,8 +475,11 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
     ax.set_ylim(0, 90)
     ax.axis("off")
 
+    # Scale factor for markers based on height (baseline is 480px)
+    sf = H_PX / 480.0
+
     # Stars
-    sizes  = np.clip((5.5 - mag_v) ** 2.2 * 0.8, 0.5, 60)
+    sizes  = np.clip((6.2 - mag_v) ** 2.2 * 0.8 * sf, 0.5 * sf, 60 * sf)
     ax.scatter(az_v, alt_v, s=sizes, c="white", linewidths=0, zorder=2)
 
     # Moon
@@ -484,14 +487,14 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
     if moon_alt > 0:
         moon_az  = moon_data.get("az", 0)
         illum    = moon_data.get("illumination", 50)
-        ax.plot(moon_az, moon_alt, "o", markersize=16, color="white",
-                markeredgecolor="#888", markeredgewidth=0.5, zorder=4)
+        ax.plot(moon_az, moon_alt, "o", markersize=16 * sf, color="white",
+                markeredgecolor="#888", markeredgewidth=0.5 * sf, zorder=4)
         if 2 < illum < 98:
             # Simple wedge for phase in the PNG (JS SVG moon will overlap this)
-            ax.plot(moon_az, moon_alt, "o", markersize=16, color="black",
+            ax.plot(moon_az, moon_alt, "o", markersize=16 * sf, color="black",
                     alpha=0.7, zorder=5) # Alpha kept slightly for shadow blending
         ax.text(moon_az, moon_alt + 3.5, "Moon", ha="center", va="bottom",
-                fontsize=8, color="#aaa", zorder=6)
+                fontsize=8 * sf, color="#aaa", zorder=6)
 
     # Sun
     if sun_data:
@@ -499,11 +502,11 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
         s_az  = sun_data.get("az", 0)
         if s_alt > -5:
             s_alt = max(0.5, s_alt)
-            ax.plot(s_az, s_alt, "o", markersize=26, color="white", alpha=0.12, zorder=3)
-            ax.plot(s_az, s_alt, "o", markersize=16, color="white",
-                    markeredgecolor="#bbb", markeredgewidth=0.5, zorder=5)
+            ax.plot(s_az, s_alt, "o", markersize=26 * sf, color="white", alpha=0.12, zorder=3)
+            ax.plot(s_az, s_alt, "o", markersize=16 * sf, color="white",
+                    markeredgecolor="#bbb", markeredgewidth=0.5 * sf, zorder=5)
             ax.text(s_az, s_alt + 4.5, "Sun", ha="center", va="bottom",
-                    fontsize=8, color="#ccc", zorder=6)
+                    fontsize=8 * sf, color="#ccc", zorder=6)
 
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=DPI, facecolor="black",
