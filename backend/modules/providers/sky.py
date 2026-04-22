@@ -130,7 +130,13 @@ def _compute_sun(lat: str, lon: str, tz_str: str) -> dict:
     except (AlwaysUpError, NeverUpError, CircumpolarError):
         pass
 
-    return {"rises": rises, "sets": sets, "is_day": is_up}
+    return {
+        "rises": rises,
+        "sets":  sets,
+        "is_day": is_up,
+        "alt":   round(math.degrees(float(sun.alt))),
+        "az":    round(math.degrees(float(sun.az))),
+    }
 
 
 def _moon_day(lat: str, lon: str, tz_str: str, offset_days: int) -> dict:

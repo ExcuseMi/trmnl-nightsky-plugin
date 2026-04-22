@@ -32,6 +32,10 @@ custom_fields:
   - Hide: hide
   optional: true
   default: hide
+- keyname: show_title_bar
+  field_type: boolean
+  name: Show Title Bar
+  description: Display the plugin name bar at the bottom of the screen.
 - keyname: hide_during_day
   field_type: boolean
   name: Hide During Daytime

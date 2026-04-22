@@ -23,6 +23,7 @@ variables:
       custom_fields_values:
         location: "London, UK"
         constellations: "names"
+        show_title_bar: "true"
         hide_during_day: "false"
         show_planet_names: "true"
         show_info_panel: "true"
@@ -38,6 +39,8 @@ variables:
     sun:
       rises: "06:12"
       sets: "21:05"
+      alt: 35
+      az: 165
     moon:
       phase: "Waxing Crescent"
       illumination: 26
