@@ -21,21 +21,13 @@ CHART_CACHE_TTL = 300  # seconds — matches the 5-minute snap interval
 _redis: "aioredis.Redis | None" = None
 
 
-def _black_png(w: int, h: int) -> Response:
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(figsize=(w / 100, h / 100), dpi=100)
-    fig.patch.set_facecolor("black")
-    ax.set_facecolor("black")
-    ax.axis("off")
-    fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=100, facecolor="black")
-    plt.close(fig)
-    buf.seek(0)
-    return Response(buf.read(), mimetype='image/png',
-                    headers={'Cache-Control': 'no-store'})
+def _black_svg(w: int, h: int) -> Response:
+    svg_content = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}">
+    <rect width="100%" height="100%" fill="black"/>
+</svg>'''
+    return Response(svg_content, mimetype='image/svg+xml', headers={
+        'Cache-Control': 'no-store'
+    })
 
 
 @app.before_serving
@@ -69,7 +61,7 @@ async def chart():
     planet_names = request.args.get('planet_names', 'true') == 'true'
 
     if not await trmnl_ip_allowed():
-        return _black_png(w, h)
+        return _black_svg(w, h)
 
     # Use the epoch timestamp supplied by /data so chart and constellation SVG
     # share the exact same LST reference. Fall back to 5-minute snap if absent.
@@ -80,7 +72,7 @@ async def chart():
         now   = datetime.now(timezone.utc)
         epoch = now.replace(minute=(now.minute // 5) * 5, second=0, microsecond=0)
 
-    cache_key = f"{lat}|{lon}|{tz}|{w}|{h}|{int(epoch.timestamp())}|{hide_sun}|{nelm}|{constellations|planet_names}"
+    cache_key = f"{lat}|{lon}|{tz}|{w}|{h}|{int(epoch.timestamp())}|{hide_sun}|{nelm}|{constellations}|{planet_names}"
 
     svg = None
     if _redis:
