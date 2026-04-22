@@ -84,7 +84,7 @@ def _get_planets(lat: str, lon: str) -> list[dict]:
                 "dir":           _az_to_dir(float(body.az)),
                 "az":            round(math.degrees(float(body.az))),
                 "alt":           round(alt_deg),
-                "mag":           round(float(body.mag), 1),
+                "mag":           f"{float(body.mag):.1f}",
                 "size":          round(float(body.size), 1),
                 "constellation": constellation,
             })
