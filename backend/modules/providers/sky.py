@@ -552,12 +552,10 @@ def _constellation_svg_data(lat: str, lon: str, constellations: str,
                 ra2, dec2 = hip_lookup[h2]
                 alt1, az1 = _radec_altaz(ra1, dec1, lat_r, lst)
                 alt2, az2 = _radec_altaz(ra2, dec2, lat_r, lst)
-                if alt1 <= 0 or alt2 <= 0 or alt1 >= 88 or alt2 >= 88:
+                if alt1 <= 0 or alt2 <= 0:
                     continue
                 az_diff = abs(az1 - az2)
                 if az_diff <= 180:
-                    if (alt1 + alt2) > 130 and az_diff > 30:
-                        continue
                     segs.append([round(az1, 1), round(alt1, 1), round(az2, 1), round(alt2, 1)])
                 else:
                     # Segment crosses az=0/360 — split at the boundary.
