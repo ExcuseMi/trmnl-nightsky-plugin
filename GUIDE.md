@@ -32,14 +32,14 @@ Tonight's stargazing conditions on your TRMNL display: a real-time star chart, l
 
 ## Sky Chart
 
-The chart is a stereographic perspective projection centred on the southern sky at 40° altitude — the same view you get when you point a camera south and tilt it up slightly. The projection preserves constellation shapes (no horizontal stretching).
+The chart is a stereographic perspective projection covering roughly 100° of sky, centred at 40° altitude facing the celestial equator — south in the northern hemisphere, north in the southern hemisphere. The projection preserves constellation shapes (no horizontal stretching).
 
 - **Stars** are sized by magnitude — brighter stars appear larger.
 - **Moon** is marked with a circle and labelled.
 - **Planets** are marked with a dot (and name if enabled).
 - **Constellation lines** connect the main stars of each figure (if enabled).
 
-Objects north of the zenith or far east/west may be outside the frame; the chart covers roughly 100° of sky height centred at 40° altitude.
+Objects behind the camera (opposite the facing direction) or at very high altitude may be outside the frame.
 
 ---
 
@@ -83,7 +83,7 @@ Each visible planet (altitude > 5°) is listed with direction, altitude in degre
 
 | Source | Used for |
 |--------|----------|
-| [Hipparcos Catalog](https://www.cosmos.esa.int/web/hipparcos) + [Skyfield](https://rhodesmill.org/skyfield/) | 118,000 stars for the sky chart |
+| [Hipparcos Catalog](https://www.cosmos.esa.int/web/hipparcos) + [Skyfield](https://rhodesmill.org/skyfield/) | ~9,000 naked-eye stars (magnitude ≤ 6.2) for the sky chart |
 | [PyEphem](https://rhodesmill.org/pyephem/) | Planet and moon positions, sun/moon rise–set times |
 | [Stellarium modern_st](https://github.com/Stellarium/stellarium) | Constellation stick figure lines |
 | [Open-Meteo](https://open-meteo.com) | Cloud cover, temperature, dew point, wind, humidity |

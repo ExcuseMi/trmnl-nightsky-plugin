@@ -494,8 +494,8 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
     az_deg  = np.degrees(az_rad)
     
     # ── Perspective Projection ──────────────────────────────────────────────────
-    proj = SkyProjection(180, 40, w_px, h_px)
-    
+    proj = SkyProjection(0 if lat_f < 0 else 180, 40, w_px, h_px)
+
     # Vectorized projection for matplotlib
     sin_alt0, cos_alt0 = math.sin(proj.alt0), math.cos(proj.alt0)
     daz_rad = np.radians(az_deg) - proj.az0
@@ -590,7 +590,7 @@ def _constellation_svg_data(lat: str, lon: str, constellations: str, w: int, h: 
     gmst  = (280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * T ** 2) % 360
     lst   = (gmst + float(lon)) % 360
 
-    proj       = SkyProjection(180, 40, w, h)
+    proj       = SkyProjection(0 if float(lat) < 0 else 180, 40, w, h)
     hip_lookup = _hip_radec_lookup()
     result     = []
     for name, chains in _get_const_hip_chains().items():
@@ -632,7 +632,7 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
     time_str = ref_utc.astimezone(local_tz).strftime("%H:%M")
 
     # Projection
-    proj = SkyProjection(180, 40, w_int, h_int)
+    proj = SkyProjection(0 if float(lat) < 0 else 180, 40, w_int, h_int)
 
     moon, best_from = _compute_moon(lat, lon, tz_str, epoch=ref_utc)
     mx, my = proj.project(moon.get("az", 0), moon.get("alt", -90))
