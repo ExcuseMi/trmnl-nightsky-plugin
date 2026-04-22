@@ -26,11 +26,7 @@
     min-width: 210px;
     max-width: 260px;
   }
-  .ns-day-label { font-size: 8px; }
-  @container (min-width: 1024px) {
-    .ns-overlay { min-width: 260px; max-width: 320px; }
-    .ns-day-label { font-size: 10px; }
-  }
+
 </style>
 
 <div class="layout gap--none m--0 p--0 layout--stretch">
@@ -60,7 +56,7 @@
           <div class="flex gap--small align--center">
             <span class="title lg:title--large">{{ data.viewing.verdict }}</span>
             {% if data.viewing.best_from %}
-              <span class="label label--small lg:label" style="margin-left:auto;flex-shrink:0">★ {{ data.viewing.best_from | plus: trmnl.user.utc_offset | date: time_format_str }}</span>
+              <span class="label label--small lg:label ml--auto">★ {{ data.viewing.best_from | plus: trmnl.user.utc_offset | date: time_format_str }}</span>
             {% endif %}
           </div>
           <span class="label label--small lg:label">Bortle {{ data.sky.bortle }} · {{ data.sky.bortle_label }} · NELM {{ data.sky.nelm }}</span>
@@ -68,7 +64,7 @@
           <div class="divider"></div>
 
           <div class="flex gap--small align--center">
-            <img id="{{ moon_id }}" style="width:32px;height:32px;flex-shrink:0" alt="moon">
+            <img id="{{ moon_id }}" class="w--8 h--8"" alt="moon">
             <div class="flex flex--col gap--[2px]">
               <span class="label lg:label--large">{{ data.moon.phase }} {{ data.moon.illumination }}%</span>
               <span class="label label--small lg:label--base">
@@ -88,9 +84,9 @@
 
           <div class="divider"></div>
 
-          <div class="flex gap--[6px]">
+          <div class="flex gap--1 w--full">
             {% for day in data.moon.days %}
-              <div class="flex flex--col gap--[2px] align--center" style="flex:1">
+              <div class="flex flex--col w--full gap--1 align--center flex--evenly">
                 <img class="{{ mf_class }}"
                      data-illum="{{ day.illumination }}"
                      data-waxing="{{ day.waxing }}"
@@ -122,7 +118,7 @@
           <span class="label label--underline lg:title">{{ data.viewing.date }}</span>
           <div class="divider"></div>
           <div class="flex gap--small align--center">
-            <img id="{{ moon_id }}" style="width:32px;height:32px;flex-shrink:0" alt="moon">
+            <img id="{{ moon_id }}" class="w--8 h--8" alt="moon">
             <div class="flex flex--col gap--[2px]">
               <span class="title lg:title--large">{{ data.viewing.verdict }}</span>
               <span class="label label--small lg:label--base">{{ data.moon.phase }} {{ data.moon.illumination }}%</span>
@@ -157,10 +153,10 @@
       {% elsif view == 4 %}
 
         <div class="ns-overlay" style="min-width:0;padding:5px 8px">
-          <span class="label label--underline" style="display:block;margin-bottom:3px">{{ data.viewing.date }}</span>
+          <span class="label label--underline mb--1">{{ data.viewing.date }}</span>
           <div class="flex gap--small align--center">
-            <img id="{{ moon_id }}" style="width:24px;height:24px;flex-shrink:0" alt="moon">
-            <div class="flex flex--col gap--[2px]">
+            <img id="{{ moon_id }}" class="w--6 h--6"alt="moon">
+            <div class="flex flex--col gap--1">
               <span class="label lg:title">{{ data.viewing.verdict }}</span>
               <span class="label label--small lg:label">{{ data.moon.illumination }}% · ☁ {{ data.forecast.now.cloud }}%</span>
             </div>
@@ -200,7 +196,8 @@
     if (illum >= 98) return '<circle cx="'+c+'" cy="'+c+'" r="'+r+'" fill="white" stroke="black" stroke-width="2"/>';
     var frac = illum / 100;
     var ex = Math.round(r * Math.abs(1 - 2 * frac) * 10) / 10;
-    var bs = isWaxing ? 1 : 0, ts = frac < 0.5 ? bs : (1 - bs);
+    var bs = isWaxing ? 1 : 0;
+    var ts = frac < 0.5 ? bs : (1 - bs);
     var d = 'M '+c+','+(c-r)+' A '+r+' '+r+' 0 0 '+bs+' '+c+','+(c+r)+' A '+ex+' '+r+' 0 0 '+ts+' '+c+','+(c-r)+' Z';
     return '<circle cx="'+c+'" cy="'+c+'" r="'+r+'" fill="black" stroke="black" stroke-width="2"/><path d="'+d+'" fill="white"/>';
   }
@@ -208,40 +205,33 @@
   function moonSrc(illum, isWaxing, r, c) {
     var size = c * 2;
     var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+size+' '+size+'">'+moonShape(illum, isWaxing, r, c)+'</svg>';
-    return 'data:image/svg+xml;base64,' + btoa(svg);
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   }
 
-  var illum    = {{ data.moon.illumination | default: 0 }};
-  var isWaxing = /Waxing|New Moon|First Quarter/.test({{ data.moon.phase | json }});
+  var illum = {{ data.moon.illumination | default: 0 }};
+  var phase = {{ data.moon.phase | json }};
+  var isWaxing = /Waxing|New Moon|First Quarter/i.test(phase);
 
+  // Main moon image
   var el = document.getElementById(moonId);
   if (el) el.src = moonSrc(illum, isWaxing, 38, 40);
 
-  document.querySelectorAll('.' + mfClass).forEach(function(img) {
-    var i = parseInt(img.getAttribute('data-illum') || '0');
-    var w = img.getAttribute('data-waxing') === 'true';
-    img.src = moonSrc(i, w, 24, 26);
-  });
-})();
-
-// Reserve sun/moon areas in collision grid
-(function() {
-  var svg = document.getElementById('{{ pl_id }}');
-  if (!svg) return;
-  var placed = svg._nsPlaced || [];
-  svg._nsPlaced = placed;
-
-  function reserveXY(x, y, size) {
-    if (x == null || y == null) return;
-    var r = {x: x - size/2, y: y - size/2, w: size, h: size};
-    placed.push(r);
+  // Wait for DOM to be fully loaded before trying to find moon phase images
+  function updateMoonImages() {
+    var elements = document.querySelectorAll('.' + mfClass);
+    elements.forEach(function(img) {
+      var i = parseInt(img.getAttribute('data-illum') || '0', 10);
+      var w = img.getAttribute('data-waxing') === 'true';
+      img.src = moonSrc(i, w, 24, 26);
+    });
   }
 
-  var daytimeMode = {{ trmnl.plugin_settings.custom_fields_values.daytime_mode | json }};
-  if (daytimeMode !== 'ignore') {
-    reserveXY({{ data.sun.x | default: 'null' }}, {{ data.sun.y | default: 'null' }}, 60);
+  // Run immediately if DOM is ready, otherwise wait
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updateMoonImages);
+  } else {
+    updateMoonImages();
   }
-  reserveXY({{ data.moon.x | default: 'null' }}, {{ data.moon.y | default: 'null' }}, 50);
 })();
 
 </script>
