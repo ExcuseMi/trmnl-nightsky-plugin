@@ -141,7 +141,9 @@ async def data():
             'lat': lat, 'lon': lon, 'tz': tz, 'w': w, 'h': h,
             't': int(snap.timestamp()),
         })
-        payload['sky']['chart'] = chart_url
+        payload['sky']['chart']   = chart_url
+        payload['sky']['chart_w'] = int(w)
+        payload['sky']['chart_h'] = int(h)
 
         return jsonify(payload)
     except Exception as exc:

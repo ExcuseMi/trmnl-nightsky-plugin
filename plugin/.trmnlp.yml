@@ -32,6 +32,8 @@ variables:
       stars: 3200
       stars_formatted: "3k+"
       chart: ""
+      chart_w: 800
+      chart_h: 480
     sun:
       rises: "06:12"
       sets: "21:05"
