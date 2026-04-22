@@ -534,8 +534,11 @@ def _constellation_svg_data(lat: str, lon: str, constellations: str,
             for i in range(len(altaz) - 1):
                 alt1, az1 = altaz[i]
                 alt2, az2 = altaz[i + 1]
-                # Skip below-horizon or near-zenith (az is undefined/unstable above ~88°)
+                # Skip below-horizon, near-zenith (az undefined ≥88°), or high-alt
+                # wide-az segments (cylindrical projection distortion near zenith).
                 if alt1 <= 0 or alt2 <= 0 or alt1 >= 88 or alt2 >= 88:
+                    continue
+                if (alt1 + alt2) > 130 and abs(az1 - az2) > 30:
                     continue
                 if abs(az1 - az2) <= 180:
                     segs.append([round(az1, 1), round(alt1, 1), round(az2, 1), round(alt2, 1)])
