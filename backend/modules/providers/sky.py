@@ -26,7 +26,7 @@ def _skyfield():
         _SF_EARTH  = eph["earth"]
         with _SF_LOADER.open(hipparcos.URL) as f:
             df = hipparcos.load_dataframe(f)
-        _HIP_DF = df[df["magnitude"] <= 5.5].copy()
+        _HIP_DF = df[df["magnitude"] <= 6.2].copy()
     return _SF_TS, _HIP_DF, _SF_EARTH
 
 log = logging.getLogger(__name__)

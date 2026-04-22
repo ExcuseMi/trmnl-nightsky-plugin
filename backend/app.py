@@ -160,8 +160,12 @@ async def data():
         base_url  = os.getenv('BASE_URL', '').rstrip('/') or \
                     str(request.url).split('?')[0].rsplit('/', 1)[0]
         
+        # 1:1 scale: 90 degrees altitude = 480px height => 360 degrees azimuth = 1920px width
+        cw_val = 1920
+        ch_val = 480
+        
         chart_params = {
-            'lat': lat, 'lon': lon, 'tz': tz, 'w': w, 'h': h,
+            'lat': lat, 'lon': lon, 'tz': tz, 'w': cw_val, 'h': ch_val,
             't': int(snap.timestamp()),
         }
         if daytime_mode == 'ignore':
@@ -169,8 +173,8 @@ async def data():
 
         chart_url = base_url + '/chart?' + urlencode(chart_params)
         payload['sky']['chart']   = chart_url
-        payload['sky']['chart_w'] = int(w)
-        payload['sky']['chart_h'] = int(h)
+        payload['sky']['chart_w'] = cw_val
+        payload['sky']['chart_h'] = ch_val
 
         return jsonify(payload)
     except Exception as exc:
