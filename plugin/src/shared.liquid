@@ -17,6 +17,11 @@
     min-width: 210px;
     max-width: 260px;
   }
+  .ns-day-label { font-size: 8px; }
+  @container (min-width: 1024px) {
+    .ns-overlay { min-width: 260px; max-width: 320px; }
+    .ns-day-label { font-size: 10px; }
+  }
 </style>
 
 <div class="layout layout--stretch">
@@ -42,13 +47,17 @@
 
       <div class="ns-overlay">
 
+        <span class="label label--small lg:label" style="color:#555">Viewing conditions · {{ data.viewing.date }}</span>
+
+        <div class="divider"></div>
+
         <div class="flex gap--small align--center">
           <span class="title lg:title--large">{{ data.viewing.verdict }}</span>
           {% if data.viewing.best_from %}
             <span class="label label--small lg:label" style="margin-left:auto;flex-shrink:0">★ {{ data.viewing.best_from }}</span>
           {% endif %}
         </div>
-        <span class="label label--small">Bortle {{ data.sky.bortle }} · {{ data.sky.bortle_label }} · NELM {{ data.sky.nelm }}</span>
+        <span class="label label--small lg:label">Bortle {{ data.sky.bortle }} · {{ data.sky.bortle_label }} · NELM {{ data.sky.nelm }}</span>
 
         <div class="divider"></div>
 
@@ -56,7 +65,7 @@
           <img id="{{ moon_id }}" style="width:32px;height:32px;flex-shrink:0" alt="moon">
           <div class="flex flex--col gap--[2px]">
             <span class="label lg:description">{{ data.moon.phase }} {{ data.moon.illumination }}%</span>
-            <span class="label label--small">
+            <span class="label label--small lg:label">
               {% if data.moon.rises %}↑{{ data.moon.rises }}{% endif %}
               {% if data.moon.sets %} ↓{{ data.moon.sets }}{% endif %}
             </span>
@@ -68,9 +77,9 @@
         <div class="divider"></div>
 
         <div class="flex flex--col gap--[3px]">
-          <span class="label label--small">☀ ↓{{ data.sun.sets }} ↑{{ data.sun.rises }}{% if data.moon.sets %} · ☽ ↓{{ data.moon.sets }}{% endif %}</span>
-          <span class="label label--small">🌡 {{ data.forecast.now.temp }}°C · 💧 {{ data.forecast.now.dew_point }}°C · 💨 {{ data.forecast.now.wind_dir }} {{ data.forecast.now.wind_speed }} km/h</span>
-          <span class="label label--small">RH {{ data.forecast.now.humidity }}% · ☁ L{{ data.forecast.now.cloud_low }}% M{{ data.forecast.now.cloud_mid }}% H{{ data.forecast.now.cloud_high }}%</span>
+          <span class="label label--small lg:label">☀ ↓{{ data.sun.sets }} ↑{{ data.sun.rises }}{% if data.moon.sets %} · ☽ ↓{{ data.moon.sets }}{% endif %}</span>
+          <span class="label label--small lg:label">🌡 {{ data.forecast.now.temp }}°C · 💧 {{ data.forecast.now.dew_point }}°C · 💨 {{ data.forecast.now.wind_dir }} {{ data.forecast.now.wind_speed }} km/h</span>
+          <span class="label label--small lg:label">RH {{ data.forecast.now.humidity }}% · ☁ L{{ data.forecast.now.cloud_low }}% M{{ data.forecast.now.cloud_mid }}% H{{ data.forecast.now.cloud_high }}%</span>
         </div>
 
         <div class="divider"></div>
@@ -82,8 +91,8 @@
                    data-illum="{{ day.illumination }}"
                    data-waxing="{{ day.waxing }}"
                    style="width:28px;height:28px" alt="{{ day.phase }}">
-              <span class="label label--small" style="font-size:8px;text-align:center">{{ day.label }}</span>
-              <span class="label label--small" style="font-size:8px;text-align:center">{{ day.illumination }}%</span>
+              <span class="label label--small ns-day-label" style="text-align:center">{{ day.label }}</span>
+              <span class="label label--small ns-day-label" style="text-align:center">{{ day.illumination }}%</span>
             </div>
           {% endfor %}
         </div>
@@ -94,8 +103,8 @@
           <div class="flex flex--col gap--[3px]">
             {% for planet in data.planets limit: 4 %}
               <div class="flex gap--small">
-                <span class="label label--small" style="flex:1;min-width:0">{{ planet.name }} {{ planet.dir }} {{ planet.alt }}°</span>
-                <span class="label label--small" style="color:#555;flex-shrink:0">mag {{ planet.mag }} · {{ planet.constellation }}</span>
+                <span class="label label--small lg:label" style="flex:1;min-width:0">{{ planet.name }} {{ planet.dir }} {{ planet.alt }}°</span>
+                <span class="label label--small lg:label" style="color:#555;flex-shrink:0">mag {{ planet.mag }} · {{ planet.constellation }}</span>
               </div>
             {% endfor %}
           </div>
@@ -106,19 +115,21 @@
     {% elsif view == 2 %}
 
       <div class="ns-overlay">
+        <span class="label label--small lg:label" style="color:#555">Viewing conditions · {{ data.viewing.date }}</span>
+        <div class="divider"></div>
         <div class="flex gap--small align--center">
           <img id="{{ moon_id }}" style="width:32px;height:32px;flex-shrink:0" alt="moon">
           <div class="flex flex--col gap--[2px]">
-            <span class="title">{{ data.viewing.verdict }}</span>
-            <span class="label label--small">{{ data.moon.phase }} {{ data.moon.illumination }}%</span>
+            <span class="title lg:title--large">{{ data.viewing.verdict }}</span>
+            <span class="label label--small lg:label">{{ data.moon.phase }} {{ data.moon.illumination }}%</span>
           </div>
         </div>
         <div class="divider"></div>
         <div class="flex flex--col gap--[3px]">
-          <span class="label label--small">Bortle {{ data.sky.bortle }} · NELM {{ data.sky.nelm }}</span>
-          <span class="label label--small">☀ ↓{{ data.sun.sets }} ↑{{ data.sun.rises }} · ☁ {{ data.forecast.now.cloud }}% · 🌡 {{ data.forecast.now.temp }}°C</span>
+          <span class="label label--small lg:label">Bortle {{ data.sky.bortle }} · NELM {{ data.sky.nelm }}</span>
+          <span class="label label--small lg:label">☀ ↓{{ data.sun.sets }} ↑{{ data.sun.rises }} · ☁ {{ data.forecast.now.cloud }}% · 🌡 {{ data.forecast.now.temp }}°C</span>
           {% if data.planets.size > 0 %}
-            <span class="label label--small">{% for planet in data.planets limit: 3 %}{{ planet.name }} {{ planet.dir }} {{ planet.alt }}°{% unless forloop.last %} · {% endunless %}{% endfor %}</span>
+            <span class="label label--small lg:label">{% for planet in data.planets limit: 3 %}{{ planet.name }} {{ planet.dir }} {{ planet.alt }}°{% unless forloop.last %} · {% endunless %}{% endfor %}</span>
           {% endif %}
         </div>
       </div>
@@ -126,25 +137,28 @@
     {% elsif view == 3 %}
 
       <div class="ns-overlay">
+        <span class="label label--small lg:label" style="color:#555">Viewing conditions · {{ data.viewing.date }}</span>
+        <div class="divider"></div>
         <div class="flex gap--small align--center">
           <img id="{{ moon_id }}" style="width:32px;height:32px;flex-shrink:0" alt="moon">
           <div class="flex flex--col gap--[2px]">
-            <span class="title">{{ data.viewing.verdict }}</span>
-            <span class="label label--small">{{ data.moon.phase }} {{ data.moon.illumination }}%</span>
+            <span class="title lg:title--large">{{ data.viewing.verdict }}</span>
+            <span class="label label--small lg:label">{{ data.moon.phase }} {{ data.moon.illumination }}%</span>
           </div>
         </div>
         <div class="divider"></div>
-        <span class="label label--small">Bortle {{ data.sky.bortle }} · ☁ {{ data.forecast.now.cloud }}% · {{ data.forecast.now.temp }}°C</span>
+        <span class="label label--small lg:label">Bortle {{ data.sky.bortle }} · ☁ {{ data.forecast.now.cloud }}% · {{ data.forecast.now.temp }}°C</span>
       </div>
 
     {% elsif view == 4 %}
 
       <div class="ns-overlay" style="min-width:0;padding:5px 8px">
+        <span class="label label--small" style="color:#555;display:block;margin-bottom:3px">{{ data.viewing.date }}</span>
         <div class="flex gap--small align--center">
           <img id="{{ moon_id }}" style="width:24px;height:24px;flex-shrink:0" alt="moon">
           <div class="flex flex--col gap--[2px]">
-            <span class="label">{{ data.viewing.verdict }}</span>
-            <span class="label label--small">{{ data.moon.illumination }}% · ☁ {{ data.forecast.now.cloud }}%</span>
+            <span class="label lg:title">{{ data.viewing.verdict }}</span>
+            <span class="label label--small lg:label">{{ data.moon.illumination }}% · ☁ {{ data.forecast.now.cloud }}%</span>
           </div>
         </div>
       </div>
