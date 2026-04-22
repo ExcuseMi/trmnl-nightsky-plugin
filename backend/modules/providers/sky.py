@@ -545,12 +545,17 @@ def _radec_altaz(ra_deg: float, dec_deg: float, lat_rad: float, lst: float) -> t
 
 def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
                         w_px: int = 800, h_px: int = 480,
-                        constellations: str = 'names') -> bytes:
+                        constellations: str = 'names',
+                        epoch: "datetime | None" = None) -> bytes:
     ts, hip, _earth = _skyfield()
     lat_f, lon_f = float(lat), float(lon)
 
     # Local Sidereal Time via GMST (accurate to ~1 arcmin — fine for a display chart)
-    jd   = ts.now().ut1
+    # Use caller-supplied epoch (utc_hr) so chart and constellation SVG share the same LST.
+    if epoch is not None:
+        jd = 2440587.5 + epoch.timestamp() / 86400
+    else:
+        jd = ts.now().ut1
     T    = (jd - 2451545.0) / 36525.0
     gmst = (280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * T ** 2) % 360
     lst  = (gmst + lon_f) % 360  # degrees
@@ -623,12 +628,13 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
     return buf.read()
 
 
-def _constellation_svg_data(lat: str, lon: str, constellations: str) -> list[dict]:
+def _constellation_svg_data(lat: str, lon: str, constellations: str,
+                            epoch: "datetime | None" = None) -> list[dict]:
     if constellations == 'hide':
         return []
     lat_r = math.radians(float(lat))
-    now_utc = datetime.now(timezone.utc)
-    jd   = 2440587.5 + now_utc.timestamp() / 86400
+    ref   = epoch or datetime.now(timezone.utc)
+    jd    = 2440587.5 + ref.timestamp() / 86400
     T    = (jd - 2451545.0) / 36525.0
     gmst = (280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * T ** 2) % 360
     lst  = (gmst + float(lon)) % 360
@@ -661,7 +667,8 @@ def _format_stars(n: int) -> str:
 
 
 async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
-                         constellations: str = 'hide') -> dict:
+                         constellations: str = 'hide',
+                         epoch: "datetime | None" = None) -> dict:
     bortle_str = bortle_str if bortle_str in BORTLE_MAP else "5"
     bortle_info = BORTLE_MAP[bortle_str]
     bortle_int = int(bortle_str)
@@ -713,5 +720,5 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
         "forecast":       forecast,
         "planets":        planets,
         "viewing":        viewing,
-        "constellations": _constellation_svg_data(lat, lon, constellations),
+        "constellations": _constellation_svg_data(lat, lon, constellations, epoch),
     }
