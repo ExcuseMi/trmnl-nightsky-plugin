@@ -524,6 +524,30 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
     ax.axis("off")
 
     sf = H_PX / 480.0
+
+    # ── Constellation lines (zorder=1, drawn below stars) ──────────────────
+    if constellations != 'hide':
+        hip_lookup = _hip_radec_lookup()
+        margin = 200
+        for name, chains in _get_const_hip_chains().items():
+            for chain in chains:
+                for i in range(len(chain) - 1):
+                    h1, h2 = chain[i], chain[i + 1]
+                    if h1 not in hip_lookup or h2 not in hip_lookup:
+                        continue
+                    ra1, dec1 = hip_lookup[h1]
+                    ra2, dec2 = hip_lookup[h2]
+                    alt1, az1 = _radec_altaz(ra1, dec1, lat_rad, lst)
+                    alt2, az2 = _radec_altaz(ra2, dec2, lat_rad, lst)
+                    x1, y1 = proj.project(az1, alt1)
+                    x2, y2 = proj.project(az2, alt2)
+                    if x1 is None or x2 is None:
+                        continue
+                    if (-margin < x1 < W_PX+margin and -margin < y1 < H_PX+margin) or \
+                       (-margin < x2 < W_PX+margin and -margin < y2 < H_PX+margin):
+                        ax.plot([x1, x2], [y1, y2], color='#333', linewidth=0.7 * sf,
+                                zorder=1, solid_capstyle='round')
+
     sizes  = np.clip((6.2 - mag_v) ** 2.2 * 0.8 * sf, 0.5 * sf, 60 * sf)
     ax.scatter(px_v, py_v, s=sizes, c="white", linewidths=0, zorder=2)
 
@@ -557,48 +581,33 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
 
 def _constellation_svg_data(lat: str, lon: str, constellations: str, w: int, h: int,
                             epoch: "datetime | None" = None) -> list[dict]:
-    if constellations == 'hide':
+    if constellations != 'names':
         return []
     lat_r = math.radians(float(lat))
     ref   = epoch or datetime.now(timezone.utc)
     jd    = 2440587.5 + ref.timestamp() / 86400
-    T    = (jd - 2451545.0) / 36525.0
-    gmst = (280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * T ** 2) % 360
-    lst  = (gmst + float(lon)) % 360
+    T     = (jd - 2451545.0) / 36525.0
+    gmst  = (280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * T ** 2) % 360
+    lst   = (gmst + float(lon)) % 360
 
-    proj = SkyProjection(180, 40, w, h)
+    proj       = SkyProjection(180, 40, w, h)
     hip_lookup = _hip_radec_lookup()
-    show_names = constellations == 'names'
-    result = []
+    result     = []
     for name, chains in _get_const_hip_chains().items():
-        segs: list[list[float]] = []
+        xs, ys = [], []
         for chain in chains:
-            for i in range(len(chain) - 1):
-                h1, h2 = chain[i], chain[i + 1]
-                if h1 not in hip_lookup or h2 not in hip_lookup:
+            for hip_id in chain:
+                if hip_id not in hip_lookup:
                     continue
-                ra1, dec1 = hip_lookup[h1]
-                ra2, dec2 = hip_lookup[h2]
-                alt1, az1 = _radec_altaz(ra1, dec1, lat_r, lst)
-                alt2, az2 = _radec_altaz(ra2, dec2, lat_r, lst)
-                x1, y1 = proj.project(az1, alt1)
-                x2, y2 = proj.project(az2, alt2)
-                if x1 is not None and x2 is not None:
-                    margin = 200
-                    if (-margin < x1 < w+margin and -margin < y1 < h+margin) or \
-                       (-margin < x2 < w+margin and -margin < y2 < h+margin):
-                        segs.append([x1, y1, x2, y2])
-        if not segs:
+                ra, dec = hip_lookup[hip_id]
+                alt, az = _radec_altaz(ra, dec, lat_r, lst)
+                x, y = proj.project(az, alt)
+                if x is not None and 0 < x < w and 0 < y < h:
+                    xs.append(x)
+                    ys.append(y)
+        if not xs:
             continue
-        entry: dict = {"n": name, "ls": segs}
-        if show_names:
-            all_x = [coord for s in segs for coord in [s[0], s[2]]]
-            all_y = [coord for s in segs for coord in [s[1], s[3]]]
-            lx = sum(all_x) / len(all_x)
-            ly = sum(all_y) / len(all_y)
-            if 0 < lx < w and 0 < ly < h:
-                entry["x"], entry["y"] = round(lx, 1), round(ly, 1)
-        result.append(entry)
+        result.append({"n": name, "x": round(sum(xs)/len(xs), 1), "y": round(sum(ys)/len(ys), 1)})
     return result
 
 

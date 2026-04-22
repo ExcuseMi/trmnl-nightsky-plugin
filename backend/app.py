@@ -63,8 +63,9 @@ async def chart():
     tz  = request.args.get('tz', 'UTC')
     w   = int(request.args.get('w', '800').lstrip('#') or 800)
     h   = int(request.args.get('h', '480').lstrip('#') or 480)
-    hide_sun = request.args.get('hide_sun', 'false').lower() == 'true'
-    nelm     = float(request.args.get('nelm', '6.2'))
+    hide_sun     = request.args.get('hide_sun', 'false').lower() == 'true'
+    nelm         = float(request.args.get('nelm', '6.2'))
+    constellations = request.args.get('constellations', 'hide')
 
     if not await trmnl_ip_allowed():
         return _black_png(w, h)
@@ -78,7 +79,7 @@ async def chart():
         now   = datetime.now(timezone.utc)
         epoch = now.replace(minute=(now.minute // 5) * 5, second=0, microsecond=0)
 
-    cache_key = f"{lat}|{lon}|{tz}|{w}|{h}|{int(epoch.timestamp())}|{hide_sun}|{nelm}"
+    cache_key = f"{lat}|{lon}|{tz}|{w}|{h}|{int(epoch.timestamp())}|{hide_sun}|{nelm}|{constellations}"
 
     png = None
     if _redis:
@@ -95,7 +96,8 @@ async def chart():
             sun     = _compute_sun(lat, lon, tz, epoch=epoch)
             sun_data = {'alt': sun['alt'], 'az': sun['az']} if not hide_sun else None
             png      = _generate_sky_chart(lat, lon, moon, w, h, epoch=epoch,
-                                           sun_data=sun_data, nelm=nelm)
+                                           sun_data=sun_data, nelm=nelm,
+                                           constellations=constellations)
         except Exception:
             log.exception('chart generation failed')
             return Response(status=500)
@@ -171,6 +173,8 @@ async def data():
         }
         if realistic_stars:
             chart_params['nelm'] = BORTLE_MAP.get(bortle_str, BORTLE_MAP['5'])['nelm']
+        if constellations != 'hide':
+            chart_params['constellations'] = constellations
         if daytime_mode == 'ignore':
             chart_params['hide_sun'] = 'true'
 

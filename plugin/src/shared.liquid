@@ -256,7 +256,6 @@
   var placed = svg._nsPlaced || [];
   svg._nsPlaced = placed;
 
-  var lineColor = '#444';
   var textFill  = 'rgba(255,255,255,0.85)';
   var bgFill    = 'rgba(0,0,0,0.6)';
   var font = 'var(--title-bar-font-family, var(--title-font-family, "NicoClear", monospace))';
@@ -267,21 +266,6 @@
     });
   }
 
-  // 1. Draw all lines first
-  consts.forEach(function(c) {
-    c.ls.forEach(function(s) {
-      var line = document.createElementNS(ns, 'line');
-      line.setAttribute('x1', s[0].toFixed(1));
-      line.setAttribute('y1', s[1].toFixed(1));
-      line.setAttribute('x2', s[2].toFixed(1));
-      line.setAttribute('y2', s[3].toFixed(1));
-      line.setAttribute('stroke', lineColor);
-      line.setAttribute('stroke-width', '1.1');
-      svg.appendChild(line);
-    });
-  });
-
-  // 2. Draw all labels on top
   consts.forEach(function(c) {
     if (c.x === undefined) return;
     var tx = c.x, ty = c.y;
@@ -323,9 +307,9 @@
   var AR = 18;
   var font = 'var(--title-bar-font-family, var(--title-font-family, "NicoClear", monospace))';
 
-  var dotFill   = '#bbb';
-  var dotStroke = 'rgba(180,180,180,0.4)';
-  var leaderClr = 'rgba(255,255,255,0.35)';
+  var dotFill   = '#999';
+  var dotStroke = 'rgba(150,150,150,0.4)';
+  var leaderClr = 'rgba(255,255,255,0.25)';
   var labelBg   = 'rgba(0,0,0,0.65)';
   var labelClr  = 'white';
 

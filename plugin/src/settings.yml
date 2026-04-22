@@ -22,22 +22,10 @@ custom_fields:
   name: Location
   description: City or address to centre the sky report on.<br /><strong>Examples:</strong> London, UK · Central Park, New York · Sydney, Australia
   placeholder: London, UK
-- keyname: show_info_panel
-  field_type: boolean
-  name: Show Info Panel
-  description: Show the conditions overlay on top of the star chart.<br /><strong>Includes:</strong> viewing verdict · moon phase &amp; rise/set · Bortle/NELM · cloud cover · temperature &amp; dew point · visible planets. Disable for a clean chart-only view.
-- keyname: daytime_mode
-  field_type: select
-  name: During Daytime
-  description: How the plugin behaves when the sun is above the horizon.<br /><strong>Earliest night</strong> fast-forwards the chart to astronomical dusk.
-  options:
-  - Show chart as if the sun wasn't there: ignore
-  - Show chart from the earliest night time: earliest_night
-  - Skip plugin display during the daytime: skip
-  default: ignore
 - keyname: constellations
   field_type: select
   name: Constellations
+  group: Star Chart
   description: Draw constellation stick figures on the star chart.<br />Lines sourced from <a href="https://github.com/Stellarium/stellarium">Stellarium</a> (Sky &amp; Telescope modern culture).
   options:
   - Show with names: names
@@ -48,14 +36,32 @@ custom_fields:
 - keyname: show_planet_names
   field_type: boolean
   name: Show Planet Names
+  group: Star Chart
   description: Label each visible planet on the star chart.<br />Only planets <strong>above 5° altitude</strong> are shown.
 - keyname: realistic_stars
   field_type: boolean
   name: Realistic Star Count
+  group: Star Chart
   description: Limit stars to those actually visible under your local light pollution (Bortle/NELM).<br />When off, all catalog stars are shown regardless of sky brightness.
+- keyname: show_info_panel
+  field_type: boolean
+  name: Show Info Panel
+  group: Overlay
+  description: Show the conditions overlay on top of the star chart.<br /><strong>Includes:</strong> viewing verdict · moon phase &amp; rise/set · Bortle/NELM · cloud cover · temperature &amp; dew point · visible planets. Disable for a clean chart-only view.
+- keyname: daytime_mode
+  field_type: select
+  name: During Daytime
+  group: General
+  description: How the plugin behaves when the sun is above the horizon.<br /><strong>Earliest night</strong> fast-forwards the chart to astronomical dusk.
+  options:
+  - Show chart as if the sun wasn't there: ignore
+  - Show chart from the earliest night time: earliest_night
+  - Skip plugin display during the daytime: skip
+  default: ignore
 - keyname: time_format
   field_type: select
   name: Time Format
+  group: General
   description: Display rise/set times in 24-hour or 12-hour (AM/PM) format.
   options:
   - 24-hour: 24h
@@ -64,6 +70,7 @@ custom_fields:
 - keyname: show_title_bar
   field_type: boolean
   name: Show Title Bar
+  group: General
   description: Display the plugin name bar at the bottom of the screen.
 name: Night Sky
 refresh_interval: 15
