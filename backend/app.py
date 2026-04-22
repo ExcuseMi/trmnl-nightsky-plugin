@@ -66,6 +66,7 @@ async def chart():
     hide_sun     = request.args.get('hide_sun', 'false').lower() == 'true'
     nelm         = float(request.args.get('nelm', '6.2'))
     constellations = request.args.get('constellations', 'hide')
+    planet_names = request.args.get('planet_names', 'true') == 'true'
 
     if not await trmnl_ip_allowed():
         return _black_png(w, h)
@@ -79,36 +80,37 @@ async def chart():
         now   = datetime.now(timezone.utc)
         epoch = now.replace(minute=(now.minute // 5) * 5, second=0, microsecond=0)
 
-    cache_key = f"{lat}|{lon}|{tz}|{w}|{h}|{int(epoch.timestamp())}|{hide_sun}|{nelm}|{constellations}"
+    cache_key = f"{lat}|{lon}|{tz}|{w}|{h}|{int(epoch.timestamp())}|{hide_sun}|{nelm}|{constellations|planet_names}"
 
-    png = None
+    svg = None
     if _redis:
         try:
-            png = await _redis.get(f'chart:{cache_key}')
-            if png:
+            svg = await _redis.get(f'chart:{cache_key}')
+            if svg:
                 log.info('chart cache hit for %s', cache_key[:40])
         except Exception:
             log.warning('Redis get failed', exc_info=True)
 
-    if png is None:
+    if svg is None:
         try:
             moon, _ = _compute_moon(lat, lon, tz, epoch=epoch)
             sun     = _compute_sun(lat, lon, tz, epoch=epoch)
             sun_data = {'alt': sun['alt'], 'az': sun['az']} if not hide_sun else None
-            png      = _generate_sky_chart(lat, lon, moon, w, h, epoch=epoch,
+            svg      = _generate_sky_chart(lat, lon, moon, w, h, epoch=epoch,
                                            sun_data=sun_data, nelm=nelm,
-                                           constellations=constellations)
+                                           constellations=constellations,
+                                           planet_names=planet_names)
         except Exception:
             log.exception('chart generation failed')
             return Response(status=500)
         if _redis:
             try:
-                await _redis.setex(f'chart:{cache_key}', CHART_CACHE_TTL, png)
+                await _redis.setex(f'chart:{cache_key}', CHART_CACHE_TTL, svg)
                 log.info('chart cached for %s', cache_key[:40])
             except Exception:
                 log.warning('Redis set failed', exc_info=True)
 
-    return Response(png, mimetype='image/svg+xml', headers={
+    return Response(svg, mimetype='image/svg+xml', headers={
         'Cache-Control': 'no-cache',
     })
 
@@ -173,8 +175,6 @@ async def data():
         }
         if realistic_stars:
             chart_params['nelm'] = BORTLE_MAP.get(bortle_str, BORTLE_MAP['5'])['nelm']
-        if constellations != 'hide':
-            chart_params['constellations'] = constellations
         if daytime_mode == 'ignore':
             chart_params['hide_sun'] = 'true'
 
