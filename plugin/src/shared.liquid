@@ -45,9 +45,8 @@
 
       <div class="ns-overlay">
 
-        <span class="label label--underline lg:title">{{ data.viewing.date }}</span>
+        <span class="label label--underline lg:label--large">{{ data.viewing.date }}</span>
 
-        <div class="divider"></div>
 
         <div class="flex gap--small align--center">
           <span class="title lg:title--large">{{ data.viewing.verdict }}</span>
@@ -62,8 +61,8 @@
         <div class="flex gap--small align--center">
           <img id="{{ moon_id }}" style="width:32px;height:32px;flex-shrink:0" alt="moon">
           <div class="flex flex--col gap--[2px]">
-            <span class="label lg:description">{{ data.moon.phase }} {{ data.moon.illumination }}%</span>
-            <span class="label label--small lg:label">
+            <span class="label lg:label--large">{{ data.moon.phase }} {{ data.moon.illumination }}%</span>
+            <span class="label label--small lg:label--base">
               {% if data.moon.rises %}↑{{ data.moon.rises }}{% endif %}
               {% if data.moon.sets %} ↓{{ data.moon.sets }}{% endif %}
             </span>
@@ -73,9 +72,9 @@
         <div class="divider"></div>
 
         <div class="flex flex--col gap--[3px]">
-          <span class="label label--small lg:label">☀ ↓{{ data.sun.sets }} ↑{{ data.sun.rises }}{% if data.moon.sets %} · ☽ ↓{{ data.moon.sets }}{% endif %}</span>
-          <span class="label label--small lg:label">🌡 {{ data.forecast.now.temp }}°C · 💧 {{ data.forecast.now.dew_point }}°C · 💨 {{ data.forecast.now.wind_dir }} {{ data.forecast.now.wind_speed }} km/h</span>
-          <span class="label label--small lg:label">RH {{ data.forecast.now.humidity }}% · ☁ L{{ data.forecast.now.cloud_low }}% M{{ data.forecast.now.cloud_mid }}% H{{ data.forecast.now.cloud_high }}%</span>
+          <span class="label label--small lg:label--base">☀ ↓{{ data.sun.sets }} ↑{{ data.sun.rises }}{% if data.moon.sets %} · ☽ ↓{{ data.moon.sets }}{% endif %}</span>
+          <span class="label label--small lg:label--base">🌡 {{ data.forecast.now.temp }}°C · 💧 {{ data.forecast.now.dew_point }}°C · 💨 {{ data.forecast.now.wind_dir }} {{ data.forecast.now.wind_speed }} km/h</span>
+          <span class="label label--small lg:label--base">RH {{ data.forecast.now.humidity }}% · ☁ L{{ data.forecast.now.cloud_low }}% M{{ data.forecast.now.cloud_mid }}% H{{ data.forecast.now.cloud_high }}%</span>
         </div>
 
         <div class="divider"></div>
@@ -99,8 +98,8 @@
           <div class="flex flex--col gap--[3px]">
             {% for planet in data.planets limit: 4 %}
               <div class="flex gap--small">
-                <span class="label label--small lg:label" style="flex:1;min-width:0">{{ planet.name }} {{ planet.dir }} {{ planet.alt }}°</span>
-                <span class="label label--small lg:label" style="color:#555;flex-shrink:0">mag {{ planet.mag }} · {{ planet.constellation }}</span>
+                <span class="label label--small lg:label--base" style="flex:1;min-width:0">{{ planet.name }} {{ planet.dir }} {{ planet.alt }}°</span>
+                <span class="label label--small lg:label--base" style="color:#555;flex-shrink:0">mag {{ planet.mag }} · {{ planet.constellation }}</span>
               </div>
             {% endfor %}
           </div>
@@ -117,15 +116,15 @@
           <img id="{{ moon_id }}" style="width:32px;height:32px;flex-shrink:0" alt="moon">
           <div class="flex flex--col gap--[2px]">
             <span class="title lg:title--large">{{ data.viewing.verdict }}</span>
-            <span class="label label--small lg:label">{{ data.moon.phase }} {{ data.moon.illumination }}%</span>
+            <span class="label label--small lg:label--base">{{ data.moon.phase }} {{ data.moon.illumination }}%</span>
           </div>
         </div>
         <div class="divider"></div>
         <div class="flex flex--col gap--[3px]">
-          <span class="label label--small lg:label">Bortle {{ data.sky.bortle }} · NELM {{ data.sky.nelm }}</span>
-          <span class="label label--small lg:label">☀ ↓{{ data.sun.sets }} ↑{{ data.sun.rises }} · ☁ {{ data.forecast.now.cloud }}% · 🌡 {{ data.forecast.now.temp }}°C</span>
+          <span class="label label--small lg:label--base">Bortle {{ data.sky.bortle }} · NELM {{ data.sky.nelm }}</span>
+          <span class="label label--small lg:label--base">☀ ↓{{ data.sun.sets }} ↑{{ data.sun.rises }} · ☁ {{ data.forecast.now.cloud }}% · 🌡 {{ data.forecast.now.temp }}°C</span>
           {% if data.planets.size > 0 %}
-            <span class="label label--small lg:label">{% for planet in data.planets limit: 3 %}{{ planet.name }} {{ planet.dir }} {{ planet.alt }}°{% unless forloop.last %} · {% endunless %}{% endfor %}</span>
+            <span class="label label--small lg:label--base">{% for planet in data.planets limit: 3 %}{{ planet.name }} {{ planet.dir }} {{ planet.alt }}°{% unless forloop.last %} · {% endunless %}{% endfor %}</span>
           {% endif %}
         </div>
       </div>
@@ -133,13 +132,13 @@
     {% elsif view == 3 %}
 
       <div class="ns-overlay">
-        <span class="label label--underline lg:title">{{ data.viewing.date }}</span>
+        <span class="label label--underline lg:label--large">{{ data.viewing.date }}</span>
         <div class="divider"></div>
         <div class="flex gap--small align--center">
           <img id="{{ moon_id }}" style="width:32px;height:32px;flex-shrink:0" alt="moon">
           <div class="flex flex--col gap--[2px]">
             <span class="title lg:title--large">{{ data.viewing.verdict }}</span>
-            <span class="label label--small lg:label">{{ data.moon.phase }} {{ data.moon.illumination }}%</span>
+            <span class="label label--small lg:label--base">{{ data.moon.phase }} {{ data.moon.illumination }}%</span>
           </div>
         </div>
         <div class="divider"></div>
@@ -245,7 +244,7 @@
   var W = rect.width, H = rect.height;
   if (!W || !H) return;
   var ns = 'http://www.w3.org/2000/svg';
-  var planets = [{% for pl in data.planets %}{"n":"{{ pl.name }}","az":{{ pl.az }},"alt":{{ pl.alt }}}{% unless forloop.last %},{% endunless %}{% endfor %}];
+  var planets = [{% for pl in data.planets %}{"n":"{{ pl.name }}","az":{{ pl.az }},"alt":{{ pl.alt }},"m":{{ pl.mag }}}{% unless forloop.last %},{% endunless %}{% endfor %}];
   var placed = [];
   var ANCHORS = [{ax:0,ay:-1},{ax:1,ay:-1},{ax:1,ay:0},{ax:1,ay:1},{ax:0,ay:1},{ax:-1,ay:1},{ax:-1,ay:0},{ax:-1,ay:-1}];
   var AR = 18;
@@ -259,12 +258,14 @@
   planets.forEach(function(pl) {
     var px = pl.az / 360 * W;
     var py = (1 - pl.alt / 90) * H;
+    var mag = parseFloat(pl.m);
+    var pr  = Math.max(2, Math.min(7, 5 - mag * 0.6));
     var dot = document.createElementNS(ns, 'circle');
     dot.setAttribute('cx', px.toFixed(1)); dot.setAttribute('cy', py.toFixed(1));
-    dot.setAttribute('r', '4'); dot.setAttribute('fill', 'white');
+    dot.setAttribute('r', pr.toFixed(1)); dot.setAttribute('fill', 'white');
     dot.setAttribute('stroke', 'rgba(255,255,255,0.4)'); dot.setAttribute('stroke-width', '1');
     svg.appendChild(dot);
-    placed.push({x: px-5, y: py-5, w: 10, h: 10});
+    placed.push({x: px-pr-1, y: py-pr-1, w: (pr+1)*2, h: (pr+1)*2});
 
     var lw = pl.n.length * 6.5 + 8, lh = 14, anchor = null;
     for (var i = 0; i < ANCHORS.length; i++) {

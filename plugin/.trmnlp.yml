@@ -97,6 +97,26 @@ variables:
         mag: 5.8
         size: 3.7
         constellation: "Aries"
+    constellations:
+      - n: "Orion"
+        ls:
+          - [100.0, 20.0, 105.0, 25.0]
+          - [105.0, 25.0, 110.0, 30.0]
+          - [110.0, 30.0, 115.0, 28.0]
+        laz: 107.0
+        lalt: 26.0
+      - n: "Gemini"
+        ls:
+          - [175.0, 32.0, 180.0, 38.0]
+          - [180.0, 38.0, 185.0, 35.0]
+        laz: 180.0
+        lalt: 35.0
+      - n: "Taurus"
+        ls:
+          - [215.0, 38.0, 222.0, 44.0]
+          - [222.0, 44.0, 228.0, 40.0]
+        laz: 222.0
+        lalt: 41.0
     viewing:
       verdict: "Good"
       score: 7
