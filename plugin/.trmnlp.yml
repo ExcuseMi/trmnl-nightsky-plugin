@@ -5,7 +5,11 @@ watch:
   - .trmnlp.yml
   - src
 
-custom_fields: {}
+custom_fields:
+  hide_info_panel:
+    label: "Hide info panel"
+    type: boolean
+    default: false
 
 variables:
   trmnl:
@@ -18,6 +22,7 @@ variables:
       no_screen_padding: "no"
       custom_fields_values:
         location: "London, UK"
+        hide_info_panel: "no"
   data:
     sky:
       bortle: 4
