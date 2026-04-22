@@ -16,7 +16,7 @@ custom_fields:
   field_type: author_bio
   description: "A real-time star chart for your location with an optional conditions overlay.<br />The chart renders a perspective view of the sky looking south — stars sized by magnitude, moon and visible planets marked, and optional constellation stick figures.<br />The overlay shows Bortle scale, NELM, moon phase &amp; illumination, cloud cover, temperature, dew point, and a best-viewing window estimate.<br /><br /><a href=\"https://github.com/ExcuseMi/trmnl-nightsky-plugin/blob/main/GUIDE.md\">\U0001F4D6 Plugin Guide</a><br /><br /><strong>Data sources:</strong><br /><a href=\"https://www.cosmos.esa.int/web/hipparcos\">Hipparcos Catalog</a> &amp; <a href=\"https://rhodesmill.org/skyfield/\">Skyfield</a> · <a href=\"https://open-meteo.com\">Open-Meteo</a> · <a href=\"https://www.lightpollutionmap.info\">lightpollutionmap.info</a> (VIIRS 2024) · <a href=\"https://github.com/Stellarium/stellarium\">Stellarium</a>"
   github_url: https://github.com/ExcuseMi/trmnl-nightsky-plugin
-  category: environment,nature,discovery
+  category: environment,nature
 - keyname: location
   field_type: string
   name: Location
