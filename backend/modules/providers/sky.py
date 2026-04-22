@@ -1,13 +1,10 @@
-import math, logging, io, json, urllib.request
+import math, logging, json, urllib.request
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import aiohttp
 import ephem
 from ephem import AlwaysUpError, NeverUpError, CircumpolarError
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
 from skyfield.api import Loader, Star, wgs84  # Star/wgs84 kept for test_sky_chart.py
 from skyfield.data import hipparcos
@@ -458,12 +455,22 @@ def _radec_altaz(ra_deg: float, dec_deg: float, lat_rad: float, lst: float) -> t
     return math.degrees(alt_r), math.degrees(az_r)
 
 
+def _svg_esc(s: str) -> str:
+    return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+
+def _rects_overlap(a: tuple, b: tuple, pad: float = 5) -> bool:
+    return (a[0] < b[0]+b[2]+pad and a[0]+a[2]+pad > b[0] and
+            a[1] < b[1]+b[3]+pad and a[1]+a[3]+pad > b[1])
+
+
 def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
                         w_px: int = 800, h_px: int = 480,
-                        constellations: str = 'names',
+                        constellations: str = 'hide',
                         epoch: "datetime | None" = None,
                         sun_data: "dict | None" = None,
-                        nelm: float = 6.2) -> bytes:
+                        nelm: float = 6.2,
+                        planet_names: bool = False) -> bytes:
     ts, hip, _earth = _skyfield()
     lat_f, lon_f = float(lat), float(lon)
 
@@ -473,63 +480,25 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
         jd = ts.now().ut1
     T    = (jd - 2451545.0) / 36525.0
     gmst = (280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * T ** 2) % 360
-    lst  = (gmst + lon_f) % 360  # degrees
+    lst  = (gmst + lon_f) % 360
 
-    # Equatorial → Horizontal for all catalog stars
-    ra_deg  = hip["ra_hours"].values * 15.0
-    dec_rad = np.radians(hip["dec_degrees"].values)
-    ha_rad  = np.radians(lst - ra_deg)
     lat_rad = math.radians(lat_f)
+    proj    = SkyProjection(0 if lat_f < 0 else 180, 40, w_px, h_px)
+    sf      = h_px / 480.0
+    W, H    = w_px, h_px
+    FONT    = 'NicoClear, monospace'
 
-    sin_alt = (np.sin(dec_rad) * math.sin(lat_rad)
-               + np.cos(dec_rad) * math.cos(lat_rad) * np.cos(ha_rad))
-    alt_rad = np.arcsin(np.clip(sin_alt, -1.0, 1.0))
-    cos_alt = np.cos(alt_rad)
-    safe    = cos_alt > 1e-10
-    cos_az  = np.where(safe, (np.sin(dec_rad) - np.sin(alt_rad) * math.sin(lat_rad)) / np.where(safe, cos_alt * math.cos(lat_rad), 1.0), 0.0)
-    az_rad  = np.arccos(np.clip(cos_az, -1.0, 1.0))
-    az_rad  = np.where(np.sin(ha_rad) > 0, 2 * np.pi - az_rad, az_rad)
+    parts  = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}">',
+              f'<rect width="{W}" height="{H}" fill="black"/>']
+    labels: list[str] = []  # rendered last, always on top
+    placed: list[tuple] = []  # (x, y, w, h) collision rects
 
-    alt_deg = np.degrees(alt_rad)
-    az_deg  = np.degrees(az_rad)
-    
-    # ── Perspective Projection ──────────────────────────────────────────────────
-    proj = SkyProjection(0 if lat_f < 0 else 180, 40, w_px, h_px)
-
-    # Vectorized projection for matplotlib
-    sin_alt0, cos_alt0 = math.sin(proj.alt0), math.cos(proj.alt0)
-    daz_rad = np.radians(az_deg) - proj.az0
-    cos_daz, sin_daz = np.cos(daz_rad), np.sin(daz_rad)
-    
-    denom = 1 + sin_alt0 * np.sin(alt_rad) + cos_alt0 * cos_alt * cos_daz
-    visible_mask = (denom > 0.1) & (alt_deg > -10) & (hip["magnitude"].values <= nelm)
-    
-    k = 2.0 / denom[visible_mask]
-    x_proj = k * cos_alt[visible_mask] * sin_daz[visible_mask]
-    y_proj = k * (cos_alt0 * np.sin(alt_rad)[visible_mask] - sin_alt0 * cos_alt[visible_mask] * cos_daz[visible_mask])
-    
-    px_v = w_px / 2 + x_proj * proj.scale
-    py_v = h_px / 2 - y_proj * proj.scale
-    mag_v = hip["magnitude"].values[visible_mask]
-
-    # ── matplotlib chart ───────────────────────────────────────────────────────
-    W_PX, H_PX, DPI = w_px, h_px, 100
-    fig, ax = plt.subplots(figsize=(W_PX / DPI, H_PX / DPI), dpi=DPI)
-    fig.patch.set_facecolor("black")
-    ax.set_facecolor("black")
-    fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
-
-    ax.set_xlim(0, W_PX)
-    ax.set_ylim(H_PX, 0) # Flip Y for SVG coordinates
-    ax.axis("off")
-
-    sf = H_PX / 480.0
-
-    # ── Constellation lines (zorder=1, drawn below stars) ──────────────────
+    # ── Constellation lines ────────────────────────────────────────────────
     if constellations != 'hide':
         hip_lookup = _hip_radec_lookup()
         margin = 200
-        for name, chains in _get_const_hip_chains().items():
+        lw = f'{0.7 * sf:.2f}'
+        for _name, chains in _get_const_hip_chains().items():
             for chain in chains:
                 for i in range(len(chain) - 1):
                     h1, h2 = chain[i], chain[i + 1]
@@ -543,40 +512,126 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
                     x2, y2 = proj.project(az2, alt2)
                     if x1 is None or x2 is None:
                         continue
-                    if (-margin < x1 < W_PX+margin and -margin < y1 < H_PX+margin) or \
-                       (-margin < x2 < W_PX+margin and -margin < y2 < H_PX+margin):
-                        ax.plot([x1, x2], [y1, y2], color='#666', linewidth=0.7 * sf,
-                                zorder=1, solid_capstyle='round')
+                    if (-margin < x1 < W+margin and -margin < y1 < H+margin) or \
+                       (-margin < x2 < W+margin and -margin < y2 < H+margin):
+                        parts.append(
+                            f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}"'
+                            f' stroke="#666" stroke-width="{lw}" stroke-linecap="round"/>')
 
-    sizes  = np.clip((6.2 - mag_v) ** 2.2 * 0.8 * sf, 0.5 * sf, 60 * sf)
-    ax.scatter(px_v, py_v, s=sizes, c="white", linewidths=0, zorder=2)
+    # ── Stars ──────────────────────────────────────────────────────────────
+    ra_deg  = hip["ra_hours"].values * 15.0
+    dec_rad = np.radians(hip["dec_degrees"].values)
+    ha_rad  = np.radians(lst - ra_deg)
 
-    # Moon
-    moon_alt = moon_data.get("alt", -1)
+    sin_alt = np.sin(dec_rad) * math.sin(lat_rad) + np.cos(dec_rad) * math.cos(lat_rad) * np.cos(ha_rad)
+    alt_rad = np.arcsin(np.clip(sin_alt, -1.0, 1.0))
+    cos_alt = np.cos(alt_rad)
+    safe    = cos_alt > 1e-10
+    cos_az  = np.where(safe, (np.sin(dec_rad) - np.sin(alt_rad) * math.sin(lat_rad)) / np.where(safe, cos_alt * math.cos(lat_rad), 1.0), 0.0)
+    az_rad  = np.arccos(np.clip(cos_az, -1.0, 1.0))
+    az_rad  = np.where(np.sin(ha_rad) > 0, 2 * np.pi - az_rad, az_rad)
+    alt_deg = np.degrees(alt_rad)
+    az_deg  = np.degrees(az_rad)
+    mag_all = hip["magnitude"].values
+
+    sin_a0, cos_a0 = math.sin(proj.alt0), math.cos(proj.alt0)
+    daz     = np.radians(az_deg) - proj.az0
+    cos_daz, sin_daz = np.cos(daz), np.sin(daz)
+    denom   = 1 + sin_a0 * np.sin(alt_rad) + cos_a0 * cos_alt * cos_daz
+    mask    = (denom > 0.1) & (alt_deg > -10) & (mag_all <= nelm)
+
+    k    = 2.0 / denom[mask]
+    px_v = W / 2 + k * cos_alt[mask] * sin_daz[mask] * proj.scale
+    py_v = H / 2 - k * (cos_a0 * np.sin(alt_rad)[mask] - sin_a0 * cos_alt[mask] * cos_daz[mask]) * proj.scale
+    mg_v = mag_all[mask]
+
+    in_view = (px_v >= -10) & (px_v <= W + 10) & (py_v >= -10) & (py_v <= H + 10)
+    px_v, py_v, mg_v = px_v[in_view], py_v[in_view], mg_v[in_view]
+
+    area_v = np.clip((6.2 - mg_v) ** 2.2 * 0.8 * sf, 0.5 * sf, 60 * sf)
+    r_v    = np.sqrt(area_v / math.pi) * (100 / 72)
+
+    for cx, cy, r in zip(px_v, py_v, r_v):
+        parts.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r:.2f}" fill="white"/>')
+
+    # ── Moon ──────────────────────────────────────────────────────────────
+    moon_alt = moon_data.get("alt", -90)
     if moon_alt > -10:
         mx, my = proj.project(moon_data.get("az", 0), moon_alt)
         if mx is not None:
+            mr    = 11.1 * sf
             illum = moon_data.get("illumination", 50)
-            ax.plot(mx, my, "o", markersize=16 * sf, color="white", markeredgecolor="#888", markeredgewidth=0.5 * sf, zorder=4)
+            parts.append(f'<circle cx="{mx:.1f}" cy="{my:.1f}" r="{mr:.1f}" fill="white" stroke="#888" stroke-width="{0.5*sf:.2f}"/>')
             if 2 < illum < 98:
-                ax.plot(mx, my, "o", markersize=16 * sf, color="black", alpha=0.7, zorder=5)
-            ax.text(mx, my + 15 * sf, "Moon", ha="center", va="bottom", fontsize=8 * sf, color="#aaa", zorder=6)
+                parts.append(f'<circle cx="{mx:.1f}" cy="{my:.1f}" r="{mr:.1f}" fill="black" opacity="0.7"/>')
+            placed.append((mx - mr, my - mr, mr * 2, mr * 2))
+            labels.append(f'<text x="{mx:.1f}" y="{my + 15*sf:.1f}" text-anchor="middle" font-size="{8*sf:.1f}" fill="#aaa" font-family="{FONT}">Moon</text>')
 
-    # Sun
+    # ── Sun ───────────────────────────────────────────────────────────────
     if sun_data:
         s_alt = sun_data.get("alt", -90)
         if s_alt > -10:
             sx, sy = proj.project(sun_data.get("az", 0), s_alt)
             if sx is not None:
-                ax.plot(sx, sy, "o", markersize=26 * sf, color="white", alpha=0.12, zorder=3)
-                ax.plot(sx, sy, "o", markersize=16 * sf, color="white", markeredgecolor="#bbb", markeredgewidth=0.5 * sf, zorder=5)
-                ax.text(sx, sy + 15 * sf, "Sun", ha="center", va="bottom", fontsize=8 * sf, color="#ccc", zorder=6)
+                sr = 11.1 * sf
+                parts.append(f'<circle cx="{sx:.1f}" cy="{sy:.1f}" r="{18*sf:.1f}" fill="white" opacity="0.12"/>')
+                parts.append(f'<circle cx="{sx:.1f}" cy="{sy:.1f}" r="{sr:.1f}" fill="white" stroke="#bbb" stroke-width="{0.5*sf:.2f}"/>')
+                placed.append((sx - sr, sy - sr, sr * 2, sr * 2))
+                labels.append(f'<text x="{sx:.1f}" y="{sy + 15*sf:.1f}" text-anchor="middle" font-size="{8*sf:.1f}" fill="#ccc" font-family="{FONT}">Sun</text>')
 
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=DPI, facecolor="black", bbox_inches=None, pad_inches=0)
-    plt.close(fig)
-    buf.seek(0)
-    return buf.read()
+    # ── Planets ───────────────────────────────────────────────────────────
+    planets = _get_planets(lat, lon, epoch=epoch)
+    AR, lh_pl = 18 * sf, 14 * sf
+
+    for pl in planets:
+        ppx, ppy = proj.project(pl["az"], pl["alt"])
+        if ppx is None:
+            continue
+        mag = float(pl["mag"])
+        area_pl = max(0.5 * sf, min(60 * sf, (6.2 - mag) ** 2.2 * 0.8 * sf))
+        pr = math.sqrt(area_pl / math.pi) * (100 / 72)
+        parts.append(f'<circle cx="{ppx:.1f}" cy="{ppy:.1f}" r="{pr:.2f}" fill="#999" stroke="#999" stroke-opacity="0.4" stroke-width="1"/>')
+        placed.append((ppx - pr - 1, ppy - pr - 1, (pr + 1) * 2, (pr + 1) * 2))
+
+        if planet_names:
+            name = pl["name"]
+            lw_pl = len(name) * 6.5 * sf + 8
+            anchor = None
+            for ax_d, ay_d in [(0,-1),(1,-1),(1,0),(1,1),(0,1),(-1,1),(-1,0),(-1,-1)]:
+                lx = ppx + ax_d * AR - (lw_pl if ax_d < 0 else (lw_pl / 2 if ax_d == 0 else 0))
+                ly = ppy + ay_d * AR - (lh_pl if ay_d < 0 else (lh_pl / 2 if ay_d == 0 else 0))
+                if lx < 2 or lx + lw_pl > W - 2 or ly < 2 or ly + lh_pl > H - 2:
+                    continue
+                if not any(_rects_overlap((lx, ly, lw_pl, lh_pl), p) for p in placed):
+                    anchor = (lx, ly)
+                    break
+            if anchor:
+                lx, ly = anchor
+                placed.append((lx, ly, lw_pl, lh_pl))
+                lcx, lcy = lx + lw_pl / 2, ly + lh_pl / 2
+                dx, dy = lcx - ppx, lcy - ppy
+                d = math.sqrt(dx * dx + dy * dy) or 1
+                labels.append(f'<line x1="{ppx+dx/d*5:.1f}" y1="{ppy+dy/d*5:.1f}" x2="{lcx:.1f}" y2="{lcy:.1f}" stroke="white" stroke-opacity="0.25" stroke-width="1" stroke-dasharray="3 2"/>')
+                labels.append(f'<rect x="{lx:.1f}" y="{ly:.1f}" width="{lw_pl:.1f}" height="{lh_pl:.1f}" fill="black" fill-opacity="0.65" rx="2"/>')
+                labels.append(f'<text x="{lx+3:.1f}" y="{ly + lh_pl*0.78:.1f}" font-size="{11*sf:.1f}" fill="white" font-weight="bold" font-family="{FONT}">{_svg_esc(name)}</text>')
+
+    # ── Constellation labels ───────────────────────────────────────────────
+    if constellations == 'names':
+        pad, lh_c, fs_c = 6, 14 * sf, 10 * sf
+        for c in _constellation_svg_data(lat, lon, 'names', W, H, epoch):
+            tx, ty = c["x"], c["y"]
+            name   = c["n"]
+            tw     = len(name) * 6 * sf
+            rect   = (tx - tw / 2 - pad / 2, ty - lh_c / 2, tw + pad, lh_c)
+            if any(_rects_overlap(rect, p) for p in placed):
+                continue
+            placed.append(rect)
+            labels.append(f'<rect x="{rect[0]:.1f}" y="{rect[1]:.1f}" width="{rect[2]:.1f}" height="{rect[3]:.1f}" fill="black" fill-opacity="0.6" rx="2"/>')
+            labels.append(f'<text x="{tx:.1f}" y="{ty:.1f}" text-anchor="middle" dominant-baseline="middle" font-size="{fs_c:.1f}" fill="white" fill-opacity="0.85" font-family="{FONT}">{_svg_esc(name)}</text>')
+
+    parts.extend(labels)
+    parts.append('</svg>')
+    return '\n'.join(parts).encode('utf-8')
 
 
 def _constellation_svg_data(lat: str, lon: str, constellations: str, w: int, h: int,
