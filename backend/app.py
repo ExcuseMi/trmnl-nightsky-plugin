@@ -6,7 +6,7 @@ from quart import Quart, jsonify, request, Response
 from modules.utils.ip_whitelist import init_ip_whitelist, require_trmnl_ip, trmnl_ip_allowed
 from modules.providers.sky import (
     build_sky_data, geocode,
-    _compute_moon, _generate_sky_chart,
+    _compute_moon, _generate_sky_chart, _compute_sun,
 )
 from modules.providers.light_pollution import init_light_pollution, lookup_bortle
 
@@ -89,7 +89,9 @@ async def chart():
     if png is None:
         try:
             moon, _ = _compute_moon(lat, lon, tz)
-            png     = _generate_sky_chart(lat, lon, moon, w, h, epoch=epoch)
+            sun      = _compute_sun(lat, lon, tz)
+            png      = _generate_sky_chart(lat, lon, moon, w, h, epoch=epoch,
+                                           sun_data={'alt': sun['alt'], 'az': sun['az']})
         except Exception:
             log.exception('chart generation failed')
             return Response(status=500)

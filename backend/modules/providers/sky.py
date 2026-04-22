@@ -499,7 +499,8 @@ def _radec_altaz(ra_deg: float, dec_deg: float, lat_rad: float, lst: float) -> t
 def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
                         w_px: int = 800, h_px: int = 480,
                         constellations: str = 'names',
-                        epoch: "datetime | None" = None) -> bytes:
+                        epoch: "datetime | None" = None,
+                        sun_data: "dict | None" = None) -> bytes:
     ts, hip, _earth = _skyfield()
     lat_f, lon_f = float(lat), float(lon)
 
@@ -572,6 +573,18 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
                     alpha=abs(1 - illum / 50) * 0.85, zorder=5)
         ax.text(moon_az, moon_alt + 3.5, "Moon", ha="center", va="bottom",
                 fontsize=8, color="#aaa", zorder=6)
+
+    # Sun
+    if sun_data:
+        s_alt = sun_data.get("alt", -90)
+        s_az  = sun_data.get("az", 0)
+        if s_alt > -5:
+            s_alt = max(0.5, s_alt)
+            ax.plot(s_az, s_alt, "o", markersize=26, color="white", alpha=0.12, zorder=3)
+            ax.plot(s_az, s_alt, "o", markersize=16, color="white",
+                    markeredgecolor="#bbb", markeredgewidth=0.5, zorder=5)
+            ax.text(s_az, s_alt + 4.5, "Sun", ha="center", va="bottom",
+                    fontsize=8, color="#ccc", zorder=6)
 
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=DPI, facecolor="black",

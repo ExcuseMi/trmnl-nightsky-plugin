@@ -74,8 +74,8 @@
           <div class="divider"></div>
 
           <div class="flex flex--col gap--[3px]">
-            <span class="label label--small lg:label--base">☀ ↓{{ data.sun.sets }} ↑{{ data.sun.rises }}{% if data.moon.sets %} · ☽ ↓{{ data.moon.sets }}{% endif %}</span>
-            <span class="label label--small lg:label--base">🌡 {{ data.forecast.now.temp }}°C · 💧 {{ data.forecast.now.dew_point }}°C · 💨 {{ data.forecast.now.wind_dir }} {{ data.forecast.now.wind_speed }} km/h</span>
+            <span class="label label--small lg:label--base"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" width="11" height="11" style="vertical-align:-2px;display:inline-block"><circle cx="6" cy="6" r="2.5" fill="currentColor"/><line x1="6" y1="0.5" x2="6" y2="2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="6" y1="9.5" x2="6" y2="11.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="0.5" y1="6" x2="2.5" y2="6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="9.5" y1="6" x2="11.5" y2="6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg> ↓{{ data.sun.sets }} ↑{{ data.sun.rises }}{% if data.moon.sets %} · <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" width="10" height="11" style="vertical-align:-2px;display:inline-block"><defs><mask id="{{ pl_id }}-mc"><rect width="12" height="12" fill="white"/><circle cx="7.5" cy="4.5" r="4.5" fill="black"/></mask></defs><circle cx="5" cy="6.5" r="5" fill="currentColor" mask="url(#{{ pl_id }}-mc)"/></svg> ↓{{ data.moon.sets }}{% endif %}</span>
+            <span class="label label--small lg:label--base"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7 13" width="7" height="12" style="vertical-align:-2px;display:inline-block"><rect x="2" y="0" width="3" height="7.5" rx="1.5" fill="currentColor"/><rect x="2.5" y="5.5" width="2" height="4" fill="currentColor"/><circle cx="3.5" cy="10.5" r="2.5" fill="currentColor"/></svg> {{ data.forecast.now.temp }}°C · <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 12" width="8" height="12" style="vertical-align:-2px;display:inline-block"><path d="M5 1C3 4 1 7 1 9a4 4 0 0 0 8 0C9 7 7 4 5 1Z" fill="currentColor"/></svg> {{ data.forecast.now.dew_point }}°C · <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 8" width="12" height="8" style="vertical-align:-1px;display:inline-block"><line x1="0.5" y1="2" x2="11.5" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="0.5" y1="6" x2="8.5" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> {{ data.forecast.now.wind_dir }} {{ data.forecast.now.wind_speed }} km/h</span>
             <span class="label label--small lg:label--base">RH {{ data.forecast.now.humidity }}% · ☁ L{{ data.forecast.now.cloud_low }}% M{{ data.forecast.now.cloud_mid }}% H{{ data.forecast.now.cloud_high }}%</span>
           </div>
 
@@ -124,7 +124,7 @@
           <div class="divider"></div>
           <div class="flex flex--col gap--[3px]">
             <span class="label label--small lg:label--base">Bortle {{ data.sky.bortle }} · NELM {{ data.sky.nelm }}</span>
-            <span class="label label--small lg:label--base">☀ ↓{{ data.sun.sets }} ↑{{ data.sun.rises }} · ☁ {{ data.forecast.now.cloud }}% · 🌡 {{ data.forecast.now.temp }}°C</span>
+            <span class="label label--small lg:label--base"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" width="11" height="11" style="vertical-align:-2px;display:inline-block"><circle cx="6" cy="6" r="2.5" fill="currentColor"/><line x1="6" y1="0.5" x2="6" y2="2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="6" y1="9.5" x2="6" y2="11.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="0.5" y1="6" x2="2.5" y2="6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="9.5" y1="6" x2="11.5" y2="6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg> ↓{{ data.sun.sets }} ↑{{ data.sun.rises }} · ☁ {{ data.forecast.now.cloud }}% · <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7 13" width="7" height="12" style="vertical-align:-2px;display:inline-block"><rect x="2" y="0" width="3" height="7.5" rx="1.5" fill="currentColor"/><rect x="2.5" y="5.5" width="2" height="4" fill="currentColor"/><circle cx="3.5" cy="10.5" r="2.5" fill="currentColor"/></svg> {{ data.forecast.now.temp }}°C</span>
             {% if data.planets.size > 0 %}
               <span class="label label--small lg:label--base">{% for planet in data.planets limit: 3 %}{{ planet.name }} {{ planet.dir }} {{ planet.alt }}°{% unless forloop.last %} · {% endunless %}{% endfor %}</span>
             {% endif %}
@@ -201,50 +201,18 @@
   });
 })();
 
-var isDay = {{ data.sky.is_day | json }};
-
-// Daytime chart inversion + sun
+// Reserve sun area in collision grid
 (function() {
   var svg = document.getElementById('{{ pl_id }}');
   if (!svg) return;
-  var ns = 'http://www.w3.org/2000/svg';
   var W = {{ cw }}, H = {{ ch }};
-  var font = 'var(--title-bar-font-family, var(--title-font-family, "NicoClear", monospace))';
-
-  if (isDay) {
-    var img = svg.querySelector('image');
-    if (img) img.style.filter = 'invert(1)';
-  }
-
   var sunAlt = {{ data.sun.alt | default: -90 }};
   var sunAz  = {{ data.sun.az  | default: 0 }};
   if (sunAlt > -5) {
     var sx = sunAz / 360 * W;
     var sy = (1 - Math.max(0, sunAlt) / 90) * H;
-    var fill = isDay ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.9)';
-    for (var i = 0; i < 8; i++) {
-      var a = i * Math.PI / 4;
-      var ray = document.createElementNS(ns, 'line');
-      ray.setAttribute('x1', (sx + Math.cos(a) * 14).toFixed(1));
-      ray.setAttribute('y1', (sy + Math.sin(a) * 14).toFixed(1));
-      ray.setAttribute('x2', (sx + Math.cos(a) * 22).toFixed(1));
-      ray.setAttribute('y2', (sy + Math.sin(a) * 22).toFixed(1));
-      ray.setAttribute('stroke', fill); ray.setAttribute('stroke-width', '2');
-      svg.appendChild(ray);
-    }
-    var sc = document.createElementNS(ns, 'circle');
-    sc.setAttribute('cx', sx.toFixed(1)); sc.setAttribute('cy', sy.toFixed(1));
-    sc.setAttribute('r', '10'); sc.setAttribute('fill', fill);
-    svg.appendChild(sc);
-    var st = document.createElementNS(ns, 'text');
-    st.setAttribute('x', sx.toFixed(1)); st.setAttribute('y', (sy + 22).toFixed(1));
-    st.setAttribute('text-anchor', 'middle'); st.setAttribute('dominant-baseline', 'middle');
-    st.setAttribute('font-size', '9'); st.setAttribute('font-family', font);
-    st.setAttribute('fill', isDay ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.75)');
-    st.textContent = 'Sun';
-    svg.appendChild(st);
     if (!svg._nsPlaced) svg._nsPlaced = [];
-    svg._nsPlaced.push({x: sx - 25, y: sy - 25, w: 50, h: 50});
+    svg._nsPlaced.push({x: sx - 30, y: sy - 30, w: 60, h: 60});
   }
 })();
 
@@ -260,9 +228,9 @@ var isDay = {{ data.sky.is_day | json }};
   var placed = svg._nsPlaced || [];
   svg._nsPlaced = placed;
 
-  var lineColor = isDay ? 'rgba(0,0,0,0.22)'        : 'rgba(255,255,255,0.22)';
-  var textFill  = isDay ? 'rgba(0,0,0,0.75)'         : 'rgba(255,255,255,0.75)';
-  var bgFill    = isDay ? 'rgba(255,255,255,0.65)'   : 'rgba(0,0,0,0.55)';
+  var lineColor = 'rgba(255,255,255,0.22)';
+  var textFill  = 'rgba(255,255,255,0.75)';
+  var bgFill    = 'rgba(0,0,0,0.55)';
   var font = 'var(--title-bar-font-family, var(--title-font-family, "NicoClear", monospace))';
 
   function overlaps(r) {
@@ -316,11 +284,11 @@ var isDay = {{ data.sky.is_day | json }};
   var AR = 18;
   var font = 'var(--title-bar-font-family, var(--title-font-family, "NicoClear", monospace))';
 
-  var dotFill   = isDay ? 'black'                  : 'white';
-  var dotStroke = isDay ? 'rgba(0,0,0,0.3)'        : 'rgba(255,255,255,0.4)';
-  var leaderClr = isDay ? 'rgba(0,0,0,0.35)'       : 'rgba(255,255,255,0.35)';
-  var labelBg   = isDay ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.65)';
-  var labelClr  = isDay ? 'black'                  : 'white';
+  var dotFill   = 'white';
+  var dotStroke = 'rgba(255,255,255,0.4)';
+  var leaderClr = 'rgba(255,255,255,0.35)';
+  var labelBg   = 'rgba(0,0,0,0.65)';
+  var labelClr  = 'white';
 
   function hits(r) {
     return placed.some(function(e) {
@@ -379,9 +347,9 @@ var isDay = {{ data.sky.is_day | json }};
 })();
 </script>
 
-{% if show_title_bar != "false" %}
+{% if show_title_bar == "true" %}
 <div class="title_bar">
-  <svg class="image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <svg class="image h--8 w--8" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
     <defs><mask id="ns-crescent"><rect width="512" height="512" fill="white"/><circle cx="306" cy="218" r="178" fill="black"/></mask></defs>
     <circle cx="238" cy="256" r="212" fill="black" mask="url(#ns-crescent)"/>
     <circle cx="404" cy="76" r="24" fill="black"/>
