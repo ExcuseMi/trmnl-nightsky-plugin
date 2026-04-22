@@ -91,7 +91,7 @@ def _get_planets(lat: str, lon: str, epoch: "datetime | None" = None) -> list[di
     return sorted(visible, key=lambda x: -x["alt"])
 
 
-async def geocode(address: str) -> tuple[str | None, str | None]:
+async def geocode(address: str) -> tuple[str | None, str | None, str | None]:
     url = "https://nominatim.openstreetmap.org/search"
     params = {"q": address, "format": "json", "limit": 1}
     headers = {"User-Agent": "trmnl-nightsky-plugin/1.0"}
@@ -99,8 +99,8 @@ async def geocode(address: str) -> tuple[str | None, str | None]:
         async with session.get(url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as r:
             results = await r.json(content_type=None)
             if results:
-                return results[0]["lat"], results[0]["lon"]
-            return None, None
+                return results[0]["lat"], results[0]["lon"], results[0].get("display_name")
+            return None, None, None
 
 
 def _compute_sun(lat: str, lon: str, tz_str: str, epoch: "datetime | None" = None) -> dict:
@@ -653,7 +653,8 @@ def _constellation_svg_data(lat: str, lon: str, constellations: str,
 
 async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
                          constellations: str = 'hide',
-                         epoch: "datetime | None" = None) -> dict:
+                         epoch: "datetime | None" = None,
+                         location_name: str | None = None) -> dict:
     bortle_str = bortle_str if bortle_str in BORTLE_MAP else "5"
     bortle_info = BORTLE_MAP[bortle_str]
     bortle_int = int(bortle_str)
@@ -696,6 +697,7 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
             "bortle_label": bortle_info["label"],
             "nelm":         bortle_info["nelm"],
             "is_day":       is_day,
+            "location":     location_name,
         },
         "sun":            sun,
         "moon":           moon,

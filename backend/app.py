@@ -126,10 +126,15 @@ async def data():
     daytime_mode = request.args.get('daytime_mode', 'ignore').lstrip('#').lower()
 
     try:
+        location_name = None
         if location:
-            lat, lon = await geocode(location)
+            lat, lon, full_name = await geocode(location)
             if lat is None:
                 return jsonify({'error': f'Could not geocode: {location}'}), 400
+            # Simplify display name: take first part (usually city) or first two if first is very short
+            if full_name:
+                parts = [p.strip() for p in full_name.split(',')]
+                location_name = parts[0]
         elif not lat or not lon:
             lat, lon = '51.5', '-0.1'
 
@@ -149,7 +154,7 @@ async def data():
                 # Snap dusk to nearest 5 mins for better caching
                 snap = dusk.replace(minute=(dusk.minute // 5) * 5, second=0, microsecond=0)
 
-        payload = await build_sky_data(lat, lon, bortle_str, tz, constellations, snap)
+        payload = await build_sky_data(lat, lon, bortle_str, tz, constellations, snap, location_name)
 
         # Build chart URL — prefer BASE_URL env var (proxy strips path prefix)
         base_url  = os.getenv('BASE_URL', '').rstrip('/') or \
