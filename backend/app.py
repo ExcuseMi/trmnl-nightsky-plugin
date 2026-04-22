@@ -1,6 +1,7 @@
 import asyncio, io, logging, os
 from datetime import datetime, timezone
 from urllib.parse import urlencode
+import redis.asyncio as aioredis
 from quart import Quart, jsonify, request, Response
 from modules.utils.ip_whitelist import init_ip_whitelist, require_trmnl_ip, trmnl_ip_allowed
 from modules.providers.sky import (
@@ -14,8 +15,9 @@ log = logging.getLogger(__name__)
 
 app = Quart(__name__)
 
-# In-process chart cache: key → png_bytes
-_chart_cache: dict = {}
+REDIS_URL      = os.getenv('REDIS_URL', 'redis://redis:6379')
+CHART_CACHE_TTL = 300  # seconds — matches the 5-minute snap interval
+_redis: "aioredis.Redis | None" = None
 
 
 def _black_png(w: int, h: int) -> Response:
@@ -37,8 +39,15 @@ def _black_png(w: int, h: int) -> Response:
 
 @app.before_serving
 async def _startup():
+    global _redis
     await init_ip_whitelist()
     await init_light_pollution()
+    try:
+        _redis = aioredis.from_url(REDIS_URL, decode_responses=False)
+        await _redis.ping()
+        log.info('Redis connected at %s', REDIS_URL)
+    except Exception:
+        log.warning('Redis unavailable — chart caching disabled')
 
 
 @app.route('/health')
@@ -66,20 +75,27 @@ async def chart():
     snap      = now.replace(minute=(now.minute // 5) * 5, second=0, microsecond=0)
     cache_key = f"{lat}|{lon}|{tz}|{w}|{h}|{snap.isoformat()}"
 
-    if cache_key in _chart_cache:
-        png = _chart_cache[cache_key]
-        log.info('chart cache hit for %s', cache_key[:40])
-    else:
+    png = None
+    if _redis:
+        try:
+            png = await _redis.get(f'chart:{cache_key}')
+            if png:
+                log.info('chart cache hit for %s', cache_key[:40])
+        except Exception:
+            log.warning('Redis get failed', exc_info=True)
+
+    if png is None:
         try:
             moon, _ = _compute_moon(lat, lon, tz)
             png     = _generate_sky_chart(lat, lon, moon, w, h, epoch=snap)
-            stale = [k for k in _chart_cache if not k.endswith(snap.isoformat())]
-            for k in stale:
-                del _chart_cache[k]
-            _chart_cache[cache_key] = png
         except Exception:
             log.exception('chart generation failed')
             return Response(status=500)
+        if _redis:
+            try:
+                await _redis.setex(f'chart:{cache_key}', CHART_CACHE_TTL, png)
+            except Exception:
+                log.warning('Redis set failed', exc_info=True)
 
     return Response(png, mimetype='image/png', headers={
         'Cache-Control': 'no-cache',
