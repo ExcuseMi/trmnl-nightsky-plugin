@@ -27,7 +27,7 @@
   {% comment %} ── Full-screen sky chart ── {% endcomment %}
   {% if data.sky.chart != "" %}
     <img src="{{ data.sky.chart }}"
-         style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:fill;display:block">
+         style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;display:block">
   {% else %}
     <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:black"></div>
   {% endif %}
