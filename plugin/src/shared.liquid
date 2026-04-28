@@ -67,7 +67,7 @@
     <div class="divider"></div>
 
     <div class="flex gap--small align--center">
-      <img id="{{ moon_id }}" class="image image-dither w--8 h--8"" alt="moon">
+      <img id="{{ moon_id }}" class="image image-dither image--stroke w--8 h--8"" alt="moon">
       <div class="flex flex--col gap--[2px]">
         <span class="label lg:label--large">{{ data.moon.phase }} {{ data.moon.illumination }}%</span>
         <span class="label label--small lg:label--base">
@@ -108,7 +108,7 @@
     <div class="flex gap--1 w--full">
       {% for day in data.moon.days %}
       <div class="flex flex--col w--full gap--1 align--center flex--evenly">
-        <img class="{{ mf_class }} w--7 h--7 image image-dither"
+        <img class="{{ mf_class }} w--7 h--7 image image-dither image--stroke"
           data-illum="{{ day.illumination }}"
           data-waxing="{{ day.waxing }}" alt="{{ day.phase }}">
         <span class="label label--small ns-day-label" style="text-align:center">{{ day.label }}</span>
@@ -138,7 +138,7 @@
     <span class="label label--underline lg:title">{{ data.viewing.date }}</span>
     <div class="divider"></div>
     <div class="flex gap--small align--center">
-      <img id="{{ moon_id }}" class="w--8 h--8" alt="moon">
+      <img id="{{ moon_id }}" class="w--8 h--8 image image-dither image--stroke " alt="moon">
       <div class="flex flex--col gap--[2px]">
         <span class="title lg:title--large">{{ data.viewing.verdict }}</span>
         <span class="label label--small lg:label--base">{{ data.moon.phase }} {{ data.moon.illumination }}%</span>
@@ -183,7 +183,7 @@
     <span class="label label--underline lg:label--large">{{ data.viewing.date }}</span>
     <div class="divider"></div>
     <div class="flex gap--small align--center">
-      <img id="{{ moon_id }}" style="width:32px;height:32px;flex-shrink:0" alt="moon">
+      <img id="{{ moon_id }}" class="image image-dither image--stroke w--8" alt="moon">
       <div class="flex flex--col gap--[2px]">
         <span class="title lg:title--large">{{ data.viewing.verdict }}</span>
         <span class="label label--small lg:label--base">{{ data.moon.phase }} {{ data.moon.illumination }}%</span>
@@ -202,7 +202,7 @@
   <div class="ns-overlay" style="min-width:0;padding:5px 8px">
     <span class="label label--underline mb--1">{{ data.viewing.date }}</span>
     <div class="flex gap--small align--center">
-      <img id="{{ moon_id }}" class="w--6 h--6" alt="moon">
+      <img id="{{ moon_id }}" class="w--6 h--6 image image-dither image--stroke" alt="moon">
       <div class="flex flex--col gap--1 w--full">
         <span class="label lg:title">{{ data.viewing.verdict }}</span>
         <div class="flex align--center gap--small flex--evenly">
