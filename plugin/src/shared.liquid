@@ -246,7 +246,7 @@
       var frac = illum / 100;
       var ex = Math.round(r * Math.abs(1 - 2 * frac) * 10) / 10;
       var bs = isWaxing ? 1 : 0;
-      var ts = frac < 0.5 ? bs : (1 - bs);
+      var ts = frac < 0.5 ? (1 - bs) : bs;
       var d = 'M '+c+','+(c-r)+' A '+r+' '+r+' 0 0 '+bs+' '+c+','+(c+r)+' A '+ex+' '+r+' 0 0 '+ts+' '+c+','+(c-r)+' Z';
       return '<circle cx="'+c+'" cy="'+c+'" r="'+r+'" fill="black" stroke="black" stroke-width="2"/><path d="'+d+'" fill="white"/>';
     }
