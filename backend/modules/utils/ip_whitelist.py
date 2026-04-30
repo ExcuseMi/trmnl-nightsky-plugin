@@ -3,10 +3,10 @@ from functools import wraps
 import aiohttp
 from quart import jsonify, request
 
-TRMNL_IPS_API = 'https://trmnl.com/api/ips'
-ENABLE_IP_WHITELIST = os.getenv('ENABLE_IP_WHITELIST', 'true').lower() == 'true'
+TRMNL_IPS_API  = 'https://trmnl.com/api/ips'
+ACCESS_MODE    = os.getenv('ACCESS_MODE', 'whitelist_only').lower()
 IP_REFRESH_HOURS = int(os.getenv('IP_REFRESH_HOURS', '24'))
-LOCALHOST_IPS = {'127.0.0.1', '::1'}
+LOCALHOST_IPS  = {'127.0.0.1', '::1'}
 
 log = logging.getLogger(__name__)
 _ips: set[str] = set(LOCALHOST_IPS)
@@ -40,15 +40,15 @@ async def _refresh_loop():
 
 async def init_ip_whitelist():
     global _ips
-    if not ENABLE_IP_WHITELIST:
-        log.info('IP whitelist disabled')
+    if ACCESS_MODE == 'open':
+        log.info('ACCESS_MODE=open — IP whitelist disabled')
         return
     fresh = await _fetch_ips()
     if fresh:
         async with _lock:
             _ips = fresh
     asyncio.create_task(_refresh_loop())
-    log.info('IP whitelist enabled — refresh every %dh', IP_REFRESH_HOURS)
+    log.info('ACCESS_MODE=%s — IP refresh every %dh', ACCESS_MODE, IP_REFRESH_HOURS)
 
 
 def _client_ip() -> str:
@@ -59,24 +59,50 @@ def _client_ip() -> str:
     return request.remote_addr
 
 
-async def trmnl_ip_allowed() -> bool:
-    if not ENABLE_IP_WHITELIST:
-        return True
+async def _is_trmnl_ip() -> bool:
     ip = _client_ip()
     async with _lock:
         return ip in _ips
 
 
-def require_trmnl_ip(f):
-    @wraps(f)
-    async def decorated(*args, **kwargs):
-        if not ENABLE_IP_WHITELIST:
+async def check_access(redis=None, prefix: str = 'ratelimit') -> str | None:
+    """
+    Returns None if the request is allowed, or a denial reason:
+      'blocked'      — ACCESS_MODE=whitelist_only and caller is not a TRMNL IP
+      'rate_limited' — ACCESS_MODE=rate_limited and caller has exceeded their quota
+    """
+    if ACCESS_MODE == 'open':
+        return None
+    if await _is_trmnl_ip():
+        return None
+    if ACCESS_MODE == 'whitelist_only':
+        log.warning('Blocked request from %s', _client_ip())
+        return 'blocked'
+    # rate_limited — Redis required; if unavailable, fails open (all public requests allowed)
+    if not redis:
+        log.warning(
+            'ACCESS_MODE=rate_limited but Redis is unavailable — '
+            'rate limit NOT enforced for %s (prefix=%s)', _client_ip(), prefix
+        )
+        return None
+    from modules.utils.rate_limiter import is_rate_limited, PUBLIC_RATE_LIMIT_WINDOW_SECONDS
+    key = f'{prefix}:{_client_ip()}'
+    if await is_rate_limited(redis, key, PUBLIC_RATE_LIMIT_WINDOW_SECONDS):
+        log.info('Rate limited: %s (key=%s)', _client_ip(), key)
+        return 'rate_limited'
+    return None
+
+
+def require_tiered_access(redis_getter, prefix: str = 'ratelimit'):
+    """Decorator for JSON endpoints. Returns 403 if blocked, 429 if rate limited."""
+    def decorator(f):
+        @wraps(f)
+        async def decorated(*args, **kwargs):
+            reason = await check_access(redis_getter(), prefix)
+            if reason == 'blocked':
+                return jsonify({'error': 'Access denied'}), 403
+            if reason == 'rate_limited':
+                return jsonify({'error': 'Rate limit exceeded. Try again later.'}), 429
             return await f(*args, **kwargs)
-        ip = _client_ip()
-        async with _lock:
-            allowed = ip in _ips
-        if not allowed:
-            log.warning('Blocked request from %s', ip)
-            return jsonify({'error': 'Access denied'}), 403
-        return await f(*args, **kwargs)
-    return decorated
+        return decorated
+    return decorator

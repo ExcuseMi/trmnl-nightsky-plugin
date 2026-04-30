@@ -3,7 +3,7 @@ from datetime import datetime, timezone, timedelta
 from urllib.parse import urlencode
 import redis.asyncio as aioredis
 from quart import Quart, jsonify, request, Response
-from modules.utils.ip_whitelist import init_ip_whitelist, require_trmnl_ip, trmnl_ip_allowed
+from modules.utils.ip_whitelist import init_ip_whitelist, check_access, require_tiered_access, ACCESS_MODE
 from modules.providers.sky import (
     build_sky_data, geocode,
     _compute_moon, _generate_sky_chart, _compute_sun,
@@ -41,6 +41,12 @@ async def _startup():
         log.info('Redis connected at %s', REDIS_URL)
     except Exception:
         log.warning('Redis unavailable — chart caching disabled')
+        if ACCESS_MODE == 'rate_limited':
+            log.warning(
+                'WARNING: ACCESS_MODE=rate_limited but Redis is unavailable. '
+                'Rate limiting is NOT enforced — all public requests are allowed. '
+                'Redis is required for rate limiting to work correctly across workers.'
+            )
 
 
 @app.route('/health')
@@ -60,7 +66,7 @@ async def chart():
     constellations = request.args.get('constellations', 'hide')
     planet_names = request.args.get('planet_names', 'true') == 'true'
 
-    if not await trmnl_ip_allowed():
+    if await check_access(_redis, 'chart'):
         return _black_svg(w, h)
 
     # Use the epoch timestamp supplied by /data so chart and constellation SVG
@@ -108,7 +114,7 @@ async def chart():
 
 
 @app.route('/data')
-@require_trmnl_ip
+@require_tiered_access(lambda: _redis, prefix='data')
 async def data():
     location      = request.args.get('location', '').strip()
     lat           = request.args.get('lat', '').strip()

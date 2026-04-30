@@ -43,7 +43,7 @@ cd plugin && trmnlp serve
 cd plugin && trmnlp push
 ```
 
-Set `ENABLE_IP_WHITELIST=false` in `.env` for local curl/browser testing.
+Set `ACCESS_MODE=open` in `.env` for local curl/browser testing.
 
 ## Environment variables
 
@@ -52,8 +52,9 @@ Set `ENABLE_IP_WHITELIST=false` in `.env` for local curl/browser testing.
 | `BACKEND_PORT` | `8080` | Host port for the backend |
 | `BASE_URL` | _(derived)_ | Public URL of backend, e.g. `https://example.com/nightsky` |
 | `REDIS_URL` | `redis://redis:6379` | Redis connection string |
-| `ENABLE_IP_WHITELIST` | `true` | Enforce TRMNL IP allowlist on `/data`; `/chart` returns black PNG for non-TRMNL IPs |
+| `ACCESS_MODE` | `whitelist_only` | `whitelist_only` = TRMNL IPs only; `rate_limited` = TRMNL unrestricted + public rate limited; `open` = no restrictions |
 | `IP_REFRESH_HOURS` | `24` | How often to refresh the TRMNL IP list |
+| `PUBLIC_RATE_LIMIT_WINDOW_SECONDS` | `300` | Rate limit window in seconds for public callers (only applies when `ACCESS_MODE=rate_limited`) |
 
 ## Key architecture decisions
 
