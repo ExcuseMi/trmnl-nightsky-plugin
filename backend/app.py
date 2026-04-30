@@ -109,7 +109,7 @@ async def chart():
                 log.warning('Redis set failed', exc_info=True)
 
     return Response(svg, mimetype='image/svg+xml', headers={
-        'Cache-Control': 'no-cache',
+        'Cache-Control': f'public, max-age={CHART_CACHE_TTL}',
     })
 
 
