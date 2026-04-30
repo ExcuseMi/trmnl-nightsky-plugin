@@ -588,7 +588,7 @@ def _generate_sky_chart(lat: str, lon: str, moon_data: dict,
         if ppx is None:
             continue
         mag = float(pl["mag"])
-        area_pl = max(0.5 * sf, min(60 * sf, (6.2 - mag) ** 2.2 * 0.8 * sf))
+        area_pl = max(0.5 * sf, min(60 * sf, max(0.0, 6.2 - mag) ** 2.2 * 0.8 * sf))
         pr = math.sqrt(area_pl / math.pi) * (100 / 72)
         parts.append(f'<circle cx="{ppx:.1f}" cy="{ppy:.1f}" r="{pr:.2f}" fill="#999" stroke="#999" stroke-opacity="0.4" stroke-width="1"/>')
         placed.append((ppx - pr - 1, ppy - pr - 1, (pr + 1) * 2, (pr + 1) * 2))
