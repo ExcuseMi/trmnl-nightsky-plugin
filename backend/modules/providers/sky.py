@@ -701,9 +701,10 @@ async def build_sky_data(lat: str, lon: str, bortle_str: str, tz_str: str,
     is_day = sun.pop("is_day", False)
 
     async with aiohttp.ClientSession() as session:
-        weather_raw = await _fetch_weather(session, lat, lon)
-        if isinstance(weather_raw, Exception):
-            log.warning("Weather fetch failed: %s", weather_raw)
+        try:
+            weather_raw = await _fetch_weather(session, lat, lon)
+        except Exception as exc:
+            log.warning("Weather fetch failed: %s", exc)
             weather_raw = {}
 
     forecast = _build_forecast(weather_raw, ref_utc)
