@@ -132,7 +132,11 @@ async def data():
     try:
         location_name = None
         if location:
-            lat, lon, full_name = await geocode(location)
+            try:
+                lat, lon, full_name = await geocode(location)
+            except Exception:
+                log.warning('Geocoding timed out/failed for %r', location, exc_info=True)
+                return jsonify({'TRMNL_SKIP_DISPLAY': True})
             if lat is None:
                 return jsonify({'error': f'Could not geocode: {location}'}), 400
             # Simplify display name: take first part (usually city) or first two if first is very short
