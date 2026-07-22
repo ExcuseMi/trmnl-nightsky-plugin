@@ -138,7 +138,7 @@ async def data():
                 log.warning('Geocoding timed out/failed for %r', location, exc_info=True)
                 return jsonify({'TRMNL_SKIP_DISPLAY': True})
             if lat is None:
-                return jsonify({'error': f'Could not geocode: {location}'}), 400
+                return jsonify({'error': f'Could not geocode: {location}'})
             # Simplify display name: take first part (usually city) or first two if first is very short
             if full_name:
                 parts = [p.strip() for p in full_name.split(',')]
@@ -191,7 +191,7 @@ async def data():
         return jsonify(payload)
     except Exception as exc:
         log.exception('build_sky_data failed')
-        return jsonify({'error': str(exc)}), 500
+        return jsonify({'error': str(exc)})
 
 
 if __name__ == '__main__':
